@@ -43,18 +43,18 @@ export default function Dashboard() {
     <div>
         <h1 className="text-2xl font-bold mb-5">Statistik dan Monitor</h1>
         
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-            <div className="stat bg-white shadow rounded-box text-center">
-                <div className="stat-title">Total Nasabah</div>
-                <div className="stat-value text-primary">{stats.totalNasabah}</div>
+        <div className="grid grid-cols-3 sm:grid-cols-3 lg:gap-4 md:gap-4 sm:gap-3 gap-2 mb-4">
+            <div className="p-3 bg-white shadow rounded-box text-center">
+                <div className="lg:text-lg md:text-lg sm:text-base text-xs font-semibold">Total Nasabah</div>
+                <div className="lg:text-5xl md:text-2xl sm:text-2xl text-xl font-bold text-primary">{stats.totalNasabah}</div>
             </div>
-            <div className="stat bg-white shadow rounded-box text-center">
-                <div className="stat-title">Jenis Sampah</div>
-                <div className="stat-value text-secondary">{stats.totalStockItems}</div>
+            <div className="p-3 bg-white shadow rounded-box text-center">
+                <div className="lg:text-lg md:text-lg sm:text-base text-xs font-semibold">Jenis Sampah</div>
+                <div className="lg:text-5xl md:text-2xl sm:text-2xl text-xl font-bold text-secondary">{stats.totalStockItems}</div>
             </div>
-            <div className="stat bg-white shadow rounded-box text-center">
-                <div className="stat-title">Total Pengepul</div>
-                <div className="stat-value text-accent">{stats.totalCollectors}</div>
+            <div className="p-3 bg-white shadow rounded-box text-center">
+                <div className="lg:text-lg md:text-lg sm:text-base text-xs font-semibold">Total Pengepul</div>
+                <div className="lg:text-5xl md:text-2xl sm:text-2xl text-xl font-bold text-primary">{stats.totalCollectors}</div>
             </div>
         </div>
 

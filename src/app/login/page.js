@@ -29,7 +29,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 mx-3">
       <div className="card w-96 bg-white shadow-xl">
         <div className="card-body">
           <h2 className="card-title justify-center text-primary font-bold text-2xl mb-4">Bank Sampah BMS2</h2>

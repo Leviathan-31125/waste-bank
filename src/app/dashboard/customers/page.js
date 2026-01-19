@@ -160,7 +160,7 @@ export default function CustomersPage() {
                     </div>
                 </td>
                 <td className="font-bold truncate">{c.name}</td>
-                <td>
+                <td className='truncate'>
                     <div className="flex flex-col">
                         <span className="text-sm font-mono">{c.phone || "-"}</span>
                         {c.phone && (

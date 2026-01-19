@@ -42,7 +42,7 @@ export default function SellPage() {
       return
     }
 
-    if (wasteTypes.find(w => w.id == waste.id)) {
+    if (cart.find(w => w.waste_type_id == waste.id)) {
       alert(`Stok sudah ada di keranjang`)
       return
     }
@@ -152,7 +152,7 @@ export default function SellPage() {
                   if (e.target.value > 0) { 
                     setTempQty(e.target.value > maxQty ? maxQty : e.target.value);
                   }
-                  else setTempQty(0);
+                  else setTempQty("");
                 }} />
             </div>
             <button className="btn btn-info text-white w-full" onClick={addToBatch} disabled={!tempItem || !tempQty}>+ Tambah ke Keranjang</button>
@@ -181,7 +181,7 @@ export default function SellPage() {
                       <td className='text-center'>{item.qty}</td>
                       <td className='text-center'>{item.uom}</td>
                       <td className='text-right truncate'>Rp {item.subtotal.toLocaleString()}</td>
-                      <td><button className="btn btn-xs btn-error text-white" onClick={() => removeItem(idx)}>X</button></td>
+                      <td className='text-center'><button className="btn btn-xs btn-error text-white" onClick={() => removeItem(idx)}>X</button></td>
                     </tr>
                   ))}
                   {cart.length === 0 && <tr><td colSpan="5" className="text-center text-gray-400 italic">Belum ada item</td></tr>}
@@ -195,7 +195,7 @@ export default function SellPage() {
           </div>
           <div className="card-actions justify-end m-4">
             <button 
-              className={`btn btn-primary w-full ${loading ? 'loading' : ''}`}
+              className={`btn btn-primary text-white w-full ${loading ? 'loading' : ''}`}
               onClick={handleSubmit}
               disabled={loading || cart.length === 0 || !selectedCollector}
             >

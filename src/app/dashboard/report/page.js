@@ -28,7 +28,7 @@ export default function ReportPage() {
         .select(`*, customers(name), collectors(name), transaction_details (
             qty,
             subtotal,
-            waste_types (name)
+            waste_types (name, uoms(name))
         )`)
         .gte('trans_date', startDate.toISOString())
         .lte('trans_date', endDate.toISOString())
@@ -97,7 +97,7 @@ export default function ReportPage() {
     <div>
         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
             <h2 className="text-2xl font-bold">Daily Report</h2>
-            <div className="flex flex-wrap gap-2 w-full md:w-auto">
+            <div className="flex flex-wrap gap-2 w-full md:w-auto justify-center">
                 <input 
                     type="text" 
                     placeholder="Cari Transaksi..." 
@@ -108,7 +108,7 @@ export default function ReportPage() {
 
                 <input 
                     type="date" 
-                    className="input input-bordered bg-white text-black"
+                    className="input input-bordered bg-white text-black lg:w-max"
                     value={dateFilter}
                     onChange={(e) => setDateFilter(e.target.value)}
                 />
@@ -143,7 +143,7 @@ export default function ReportPage() {
                             </td>
                             <td>{t.customers?.name || t.collectors?.name || "-"}</td>
                             <td>{t.note || "-"}</td>
-                            <td className="font-mono font-bold text-right">Rp {t.total_amount.toLocaleString()}</td>
+                            <td className="font-mono font-bold text-right truncate">Rp {t.total_amount.toLocaleString()}</td>
                             <td className="text-center text-xs text-gray-400">(Klik utk Detail)</td>
                         </tr>
                     ))}
@@ -154,7 +154,6 @@ export default function ReportPage() {
             </table>
         </div>
 
-        {/* MODAL DETAIL TRANSAKSI */}
         <dialog className={`modal ${selectedTrans ? 'modal-open' : ''}`}>
             <div className="modal-box bg-white text-black max-w-3xl">
                 <h3 className="font-bold text-lg mb-4">Detail Transaksi #{selectedTrans?.id}</h3>
@@ -189,7 +188,7 @@ export default function ReportPage() {
                                 <thead>
                                     <tr>
                                         <th>Item Sampah</th>
-                                        <th>Berat (Kg/Pcs)</th>
+                                        <th>Qty</th>
                                         <th className="text-right">Subtotal</th>
                                     </tr>
                                 </thead>
@@ -197,8 +196,8 @@ export default function ReportPage() {
                                     {selectedTrans.transaction_details?.map((detail, idx) => (
                                         <tr key={idx}>
                                             <td>{detail.waste_types?.name}</td>
-                                            <td>{detail.qty}</td>
-                                            <td className="text-right">Rp {detail.subtotal.toLocaleString()}</td>
+                                            <td>{detail.qty} {detail.waste_types?.uoms.name}</td>
+                                            <td className="text-right truncate">Rp {detail.subtotal.toLocaleString()}</td>
                                         </tr>
                                     ))}
                                     {(!selectedTrans.transaction_details || selectedTrans.transaction_details.length === 0) && (

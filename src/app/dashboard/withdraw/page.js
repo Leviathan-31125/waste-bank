@@ -110,7 +110,7 @@ export default function WithdrawPage() {
               value={amount}
               onChange={(e) => { 
                 if (e.target.value > 0) setAmount(e.target.value)
-                else setAmount(0);
+                else setAmount("");
               }}
             />
           </div>

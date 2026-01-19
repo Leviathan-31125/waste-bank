@@ -160,7 +160,8 @@ export default function DepositPage() {
                             className="input input-bordered w-full" 
                             value={tempQty}
                             onChange={e => { 
-                                if (e.target.value > 0) setTempQty(e.target.value)
+                                if (e.target.value > 0) setTempQty(e.target.value);
+                                else setTempQty("");
                             }}
                         />
                     </div>

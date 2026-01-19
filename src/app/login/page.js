@@ -1,14 +1,14 @@
-'use client'
-import { useState } from 'react'
-import { createClient } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+'use client';
+import { useState } from 'react';
+import { createClient } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const router = useRouter()
-  const supabase = createClient()
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const supabase = createClient();
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -32,14 +32,13 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="card w-96 bg-white shadow-xl">
         <div className="card-body">
-          <h2 className="card-title justify-center text-primary font-bold text-2xl mb-4">Bank Sampah Admin</h2>
+          <h2 className="card-title justify-center text-primary font-bold text-2xl mb-4">Bank Sampah BMS2</h2>
           
           <form onSubmit={handleLogin}>
             <div className="form-control">
               <label className="label">
                 <span className="label-text text-gray-700 font-semibold">Email</span>
               </label>
-              {/* PERBAIKAN: Tambahkan text-gray-900 dan bg-white agar kontras jelas */}
               <input 
                 type="email" 
                 placeholder="admin@banksampah.com" 
@@ -54,7 +53,6 @@ export default function LoginPage() {
               <label className="label">
                 <span className="label-text text-gray-700 font-semibold">Password</span>
               </label>
-              {/* PERBAIKAN: Tambahkan text-gray-900 */}
               <input 
                 type="password" 
                 placeholder="********" 
@@ -66,7 +64,7 @@ export default function LoginPage() {
             </div>
 
             <div className="form-control mt-8">
-              <button className={`btn btn-primary w-full ${loading ? 'loading' : ''}`} disabled={loading}>
+              <button className={`btn btn-primary text-white w-full ${loading ? 'loading' : ''}`} disabled={loading}>
                 {loading ? 'Masuk...' : 'Login'}
               </button>
             </div>

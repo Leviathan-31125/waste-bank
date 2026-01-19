@@ -128,7 +128,7 @@ export default function CollectorsPage() {
                         <td>
                           <div className='flex justify-center items-center gap-2'>
                             <button className="btn btn-xs btn-info text-white" onClick={() => handleEdit(c)}>Edit</button>
-                            <Link href={`/dashboard/collectors/${c.id}`} className="btn btn-xs hover:bg-primary/40 border border-primary text-primary">
+                            <Link href={`/dashboard/collectors/${c.id}`} prefetch={false} className="btn btn-xs hover:bg-primary/40 border border-primary text-primary">
                               Detail
                             </Link>
                             <button className="btn btn-xs btn-error text-white" onClick={() => handleDelete(c.id)}>Hapus</button>

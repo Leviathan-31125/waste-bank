@@ -36,16 +36,15 @@ export async function middleware(request) {
           })
         },
       },
+      cookieOptions: {
+        secure: process.env.NODE_ENV === 'production'
+      }
     }
   )
+  const { data: { user }} = await supabase.auth.getUser()
+  console.log(user);
+  
 
-  // 2. Cek Session (Ini akan memicu 'setAll' jika token perlu di-refresh)
-  const {
-    data: { user },
-  } = await supabase.auth.getUser() // Gunakan getUser untuk validasi yang lebih aman di server
-
-  // 3. Logic Proteksi Halaman
-  // Jika tidak ada user & mencoba akses dashboard -> tendang ke login
   if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
     return NextResponse.redirect(new URL('/login', request.url))
   }

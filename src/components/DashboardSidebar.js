@@ -13,7 +13,7 @@ export default function DashboardSidebar() {
 
   return (
     <ul className="menu p-4 w-65 min-h-full bg-base-100 text-base-content">
-        <li className="mb-4 text-2xl font-bold text-primary px-4">Bank Sampah BMS2</li>
+        <li><img src='/logo-bms2.png' className='max-w-52 w-full mx-auto' alt='Bank Sampah BMS2'/></li>
         
         <li className="menu-title">Monitor</li>
         <li><Link href="/dashboard" prefetch={false} onClick={closeDrawer}>Dashboard</Link></li>

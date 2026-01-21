@@ -15,6 +15,7 @@ export default function TopChartPage() {
   
   const years = [2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029];
   const months = [
+    { value: 'ALL', label: 'Semua' },
     { value: '01', label: 'Januari' },
     { value: '02', label: 'Februari' },
     { value: '03', label: 'Maret' },
@@ -36,13 +37,23 @@ export default function TopChartPage() {
 
   const fetchData = async () => {
     // Contoh: year_month ilike '2026-%'
-    const { data, error } = await supabase
+    if (selectedMonth === "ALL") {
+      const { data, error } = await supabase
       .from('waste_monthly_leaderboard') 
       .select('*')
-      .eq('year_month', `${selectedYear}-${selectedMonth}`)
+      .ilike('year_month', `${selectedYear}-%`);
 
-    if (error) console.log('Error:', error.message)
-    else setRawData(data || [])
+      if (error) console.log('Error:', error.message);
+      else setRawData(data || []);
+    } else {
+      const { data, error } = await supabase
+      .from('waste_monthly_leaderboard') 
+      .select('*')
+      .eq('year_month', `${selectedYear}-${selectedMonth}`);
+
+      if (error) console.log('Error:', error.message);
+      else setRawData(data || []);
+    }
   }
 
   const chartData = useMemo(() => {
@@ -109,14 +120,14 @@ export default function TopChartPage() {
             <BarChart
               layout="horizontal"
               data={chartData}
-              margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+              margin={{ top: 5, right: 2, left: 2, bottom: 5 }}
               style={{outline: "none"}}
             >
               <CartesianGrid strokeDasharray="3 3" horizontal={true} />
               <XAxis 
                 dataKey="name" 
                 type="category"  
-                tick={{fontSize: 14, fontWeight: 'bold'}} />
+                tick={{fontSize: 10, fontWeight: 'bold'}} />
               <YAxis 
                 type='number'
                 width={25}

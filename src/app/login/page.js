@@ -32,8 +32,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-100 mx-3">
       <div className="card w-96 bg-white shadow-xl">
         <div className="card-body">
-          <h2 className="card-title justify-center text-primary font-bold text-2xl mb-4">Bank Sampah BMS2</h2>
-          
+          {/* <h2 className="card-title justify-center text-primary font-bold text-2xl mb-4">Bank Sampah BMS2</h2> */}
+          <img src='/logo-bms2.png' className='max-w-52 w-full mx-auto' alt='Bank Sampah BMS2'/>
           <form onSubmit={handleLogin}>
             <div className="form-control">
               <label className="label">

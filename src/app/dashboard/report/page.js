@@ -5,10 +5,11 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
 export default function ReportPage() {
-  const supabase = createClient()
-  const [transactions, setTransactions] = useState([])
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0])
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0])
+  const supabase = createClient();
+  const [ loading, setLoading ] = useState(false);
+  const [ transactions, setTransactions ] = useState([])
+  const [ startDate, setStartDate ] = useState(new Date().toISOString().split('T')[0])
+  const [ endDate, setEndDate ] = useState(new Date().toISOString().split('T')[0])
   
   // State untuk Fitur Baru
   const [searchTerm, setSearchTerm] = useState('')
@@ -27,6 +28,7 @@ export default function ReportPage() {
     const { data, error } = await supabase
         .from('transactions')
         .select(`*, customers(name), collectors(name), transaction_details (
+            id,
             qty,
             subtotal,
             waste_types (name, uoms(name))
@@ -97,6 +99,59 @@ export default function ReportPage() {
     link.click();
   }
 
+  const handleRollback = async (data) => {
+    if(!confirm(`Yakin hapus data transaksi: ${data.trans_type} - ${data.customers?.name || data.collectors?.name}?`)) return
+    setLoading(true)
+
+    try {
+        const trans_details_ids = data.transaction_details.map(td => td.id);
+
+        // Delete Transaction Details
+        const { error: detailError } = await supabase
+        .from('transaction_details')
+        .delete()
+        .in('id', trans_details_ids);
+
+        if(detailError) throw detailError;
+
+        // Delete Transaction
+        const { data: trans, error: transError } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', data.id);
+
+        if(transError) throw transError
+
+        // Update Customer Balanace jika Deposit atau Withdraw Cash
+        if (data.trans_type === "DEPOSIT") {
+            const { error } = await supabase.rpc('update_balance', { 
+                user_id: data.customer_id, 
+                amount: (data.total_amount * -1)
+            });
+
+            if (error) throw error;
+        } 
+
+        if (data.trans_type === "WITHDRAW_CASH") {
+            const { error } = await supabase.rpc('update_balance', { 
+                user_id: data.customer_id, 
+                amount: (data.total_amount)
+            });
+
+            if (error) throw error;
+        } 
+
+        fetchReport();
+        setSelectedTrans(null);
+        alert("Delete Transaksi Berhasil!");
+    } catch (error) {
+        console.error(error)
+        alert("Gagal delete transaksi")
+    } finally {
+        setLoading(false)
+    }
+  }
+
   return (
     <div>
         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
@@ -137,7 +192,7 @@ export default function ReportPage() {
                         <th className='text-right'>Total Amount</th>
                         <th>Batch</th>
                         <th>Catatan</th>
-                        <th>Aksi</th>
+                        <th className='text-center'>Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -222,7 +277,8 @@ export default function ReportPage() {
                 )}
 
                 <div className="modal-action">
-                    <button className="btn" onClick={() => setSelectedTrans(null)}>Tutup</button>
+                    <button className="btn btn-error text-white" disabled={loading} onClick={() => handleRollback(selectedTrans)}>Hapus</button>
+                    <button className="btn" disabled={loading} onClick={() => setSelectedTrans(null)}>Tutup</button>
                 </div>
             </div>
         </dialog>

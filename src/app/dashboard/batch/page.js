@@ -170,6 +170,7 @@ const BatchPage = () => {
                 className="select select-bordered bg-white text-black w-full" 
                 value={formData.status} 
                 onChange={e => setFormData({...formData, status: e.target.value})}
+                disabled={formData.sell_status}
               >
                 <option value="OPEN">OPEN</option>
                 <option value="CLOSE">CLOSE</option>

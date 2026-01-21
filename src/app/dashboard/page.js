@@ -74,11 +74,11 @@ export default function Dashboard() {
 
         <div className="collapse collapse-arrow bg-white shadow-md border border-gray-100 rounded-box">
             <input type="checkbox" name="my-inventory-accordion" />
-            <div className="collapse-title text-lg font-medium flex justify-between items-center pr-12">
+            <div className="collapse-title text-lg font-medium flex lg:flex-row md:flex-row flex-col gap-1 justify-between lg:items-center md:items-center">
                 <span className="font-bold text-primary">Live Stock Monitor</span>
-                <span className="bg-orange-500 text-white px-2 py-1 text-sm font-bold rounded-xl">Total Data: {stocks.length || 0}</span>
+                <span className="w-max bg-orange-500 text-white px-2 py-1 text-sm font-bold rounded-xl">Total Data: {stocks.length || 0}</span>
             </div>
-            <div className="collapse-content">
+            <div className="collapse-content overflow-x-auto">
                 <h2 className="card-title">Live Stock Inventory</h2>
                 <div className="overflow-x-auto">
                     <table className="table table-zebra">

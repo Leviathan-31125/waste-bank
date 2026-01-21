@@ -76,7 +76,7 @@ export default function DepositPage() {
             .insert({
                 trans_type: 'DEPOSIT',
                 customer_id: selectedCustomer,
-                batch_id: selectedBatch,
+                batch_id: selectedBatch === "" ? null : selectedBatch,
                 total_amount: grandTotal,
                 trans_date: transDate
             })

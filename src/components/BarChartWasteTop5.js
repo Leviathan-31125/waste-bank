@@ -105,11 +105,12 @@ export default function TopChartPage() {
 
       <div className="card bg-white shadow-xl h-96 p-4 [&_svg]:outline-none mb-3">
         {chartData.length > 0 ? (
-          <ResponsiveContainer width="100%" height="100%" >
+          <ResponsiveContainer width="100%" height="100%" style={{outline: "none"}} >
             <BarChart
               layout="horizontal"
               data={chartData}
               margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+              style={{outline: "none"}}
             >
               <CartesianGrid strokeDasharray="3 3" horizontal={true} />
               <XAxis 
@@ -124,9 +125,9 @@ export default function TopChartPage() {
                 cursor={{fill: 'transparent'}}
                 formatter={(value, _, entry) => `${value.toLocaleString('id-ID')} ${entry.payload.uom}`}
               />
-              <Bar dataKey="total" radius={[0, 4, 4, 0]} barSize={40}>
+              <Bar dataKey="total" radius={[0, 4, 4, 0]} barSize={40}  style={{outline: "none"}}>
                 {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                  <Cell key={`cell-${index}`} fill={colors[index % colors.length]} style={{outline: "none"}} />
                 ))}
               </Bar>
             </BarChart>

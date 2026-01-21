@@ -1,7 +1,9 @@
 'use client';
 import Link from 'next/link';
+import { useState } from 'react';
 
 export default function DashboardSidebar() {
+  const [ loading, setLoading ] = useState(false);
   
   // Fungsi untuk menutup drawer secara manual
   const closeDrawer = () => {
@@ -33,7 +35,7 @@ export default function DashboardSidebar() {
         <li><Link href="/dashboard/report" prefetch={false} onClick={closeDrawer}>Riwayat Transaksi</Link></li>
         
         <div className="divider mt-auto"></div>
-        <Link href="/api/auth/signout" prefetch={false}><button className='w-full bg-red-500 text-white py-2 px-3 rounded-md'>Logout</button></Link>
+        <Link href="/api/auth/signout" prefetch={false}><button className='w-full bg-red-500 text-white py-2 px-3 rounded-md' disabled={loading} onClick={() => setLoading(true)}>Logout</button></Link>
     </ul>
   )
 }

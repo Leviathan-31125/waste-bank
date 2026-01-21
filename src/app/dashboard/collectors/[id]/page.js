@@ -23,7 +23,7 @@ export default function CollectorDetailPage() {
 
     const { data: trans } = await supabase
         .from('transactions')
-        .select(`*, transaction_details (*, waste_types (name))`)
+        .select(`*, transaction_details (*, waste_types (name)), batch_transactions(name)`)
         .eq('collector_id', id)
         .eq('trans_type', 'SELL_WASTE') // Filter khusus penjualan
         .order('trans_date', { ascending: false })
@@ -74,6 +74,8 @@ export default function CollectorDetailPage() {
                 <thead>
                     <tr>
                         <th>Tanggal</th>
+                        <th className='text-center'>Tipe</th>
+                        <th>Batch</th>
                         <th>Detail Item Terjual</th>
                         <th className="text-right">Total Nilai</th>
                     </tr>
@@ -81,10 +83,16 @@ export default function CollectorDetailPage() {
                 <tbody>
                     {transactions.map(t => (
                         <tr key={t.id}>
-                            <td className="align-top whitespace-nowrap">
+                            <td className="whitespace-nowrap">
                                 {new Date(t.trans_date).toLocaleDateString()}
+                                {new Date(t.trans_date).toLocaleDateString()} <br/>
+                                <span className="text-xs text-gray-500">{new Date(t.trans_date).toLocaleTimeString()}</span>
                             </td>
-                            <td>
+                            <td className='text-center truncate'>
+                               <span className="badge badge-info badge-outline">Jual Sampah</span>
+                            </td>
+                            <td className='truncate'>{t.batch_transactions?.name || "-"}</td>
+                            <td className='truncate'>
                                 <ul className="list-disc list-inside text-sm">
                                     {t.transaction_details?.map(d => (
                                         <li key={d.id}>
@@ -93,7 +101,7 @@ export default function CollectorDetailPage() {
                                     ))}
                                 </ul>
                             </td>
-                            <td className="align-top text-right font-bold text-primary">
+                            <td className="text-right font-bold text-primary truncate">
                                 Rp {t.total_amount.toLocaleString()}
                             </td>
                         </tr>

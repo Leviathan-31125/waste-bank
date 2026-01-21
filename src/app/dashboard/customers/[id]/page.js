@@ -69,7 +69,8 @@ export default function CustomerDetailPage() {
                 <thead>
                     <tr>
                         <th>Tanggal</th>
-                        <th>Tipe</th>
+                        <th className='text-center'>Tipe</th>
+                        <th>Batch</th>
                         <th>Detail Item (Sampah)</th>
                         <th className="text-right">Nominal</th>
                     </tr>
@@ -77,18 +78,19 @@ export default function CustomerDetailPage() {
                 <tbody>
                     {transactions.map(t => (
                         <tr key={t.id}>
-                            <td className="align-top truncate whitespace-nowrap">
+                            <td className="truncate whitespace-nowrap">
                                 {new Date(t.trans_date).toLocaleDateString()} <br/>
                                 <span className="text-xs text-gray-500">{new Date(t.trans_date).toLocaleTimeString()}</span>
                             </td>
-                            <td className="align-top truncate">
+                            <td className="text-center truncate">
                                 {t.trans_type === 'DEPOSIT' ? (
                                     <span className="badge badge-success badge-outline">Setor Sampah</span>
                                 ) : (
-                                    <span className="badge badge-error badge-outline">Tarik Tunai</span>
+                                    <span className="badge badge-warning text-white">Tarik Tunai</span>
                                 )}
                             </td>
-                            <td className="align-top truncate">
+                            <td className='truncate'>{t.batch_transactions?.name || "-"}</td>
+                            <td className="truncate">
                                 {t.trans_type === 'WITHDRAW_CASH' ? (
                                     <span className="italic text-gray-500">Penarikan Saldo Tunai</span>
                                 ) : (
@@ -101,7 +103,7 @@ export default function CustomerDetailPage() {
                                     </ul>
                                 )}
                             </td>
-                            <td className={`align-top text-right truncate font-bold ${t.trans_type === 'DEPOSIT' ? 'text-success' : 'text-error'}`}>
+                            <td className={`text-right truncate font-bold ${t.trans_type === 'DEPOSIT' ? 'text-success' : 'text-error'}`}>
                                 {t.trans_type === 'DEPOSIT' ? '+' : '-'} Rp {t.total_amount.toLocaleString()}
                             </td>
                         </tr>

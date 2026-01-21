@@ -225,7 +225,7 @@ export default function SellPage() {
                </select>
             </div>
             <div className="form-control mb-4">
-                <label className="label">Berat ({tempUOM})</label>
+                <label className="label">Qty ({tempUOM})</label>
                 <input type="number" className="input input-bordered" value={tempQty} onChange={e => { 
                   let maxQty = wasteTypes.find(w => w.id == tempItem)?.current_stock || 0;
       

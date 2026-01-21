@@ -187,7 +187,7 @@ export default function ReportPage() {
                 <thead>
                     <tr>
                         <th>Waktu</th>
-                        <th>Tipe</th>
+                        <th className='text-center'>Tipe</th>
                         <th>Nasabah / Pengepul</th>
                         <th className='text-right'>Total Amount</th>
                         <th>Batch</th>
@@ -199,13 +199,10 @@ export default function ReportPage() {
                     {filteredTransactions.map(t => (
                         <tr key={t.id} className="cursor-pointer hover:bg-gray-100" onClick={() => setSelectedTrans(t)}>
                             <td className='truncate'>{new Date(t.trans_date).toLocaleTimeString()}</td>
-                            <td>
-                                <span className={`badge ${
-                                    t.trans_type === 'DEPOSIT' ? 'badge-success text-white' : 
-                                    t.trans_type === 'WITHDRAW_CASH' ? 'badge-warning' : 'badge-info text-white'
-                                }`}>
-                                    {t.trans_type}
-                                </span>
+                            <td className='text-center truncate'>
+                                {t.trans_type === 'DEPOSIT' ? ( <span className="badge badge-success badge-outline">Setor Sampah</span> ) 
+                                : t.trans_type === 'WITHDRAW_CASH' ? ( <span className="badge badge-warning text-white">Tarik Tunai</span> ) 
+                                : ( <span className="badge badge-info badge-outline">Jual Sampah</span> )}
                             </td>
                             <td>{t.customers?.name || t.collectors?.name || "-"}</td>
                             <td className="font-mono font-bold text-right truncate">Rp {t.total_amount.toLocaleString()}</td>

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase';
 import Link from 'next/link';
+import { groupFirstUpperCase } from '@/utils/TextModify';
 
 export default function CustomersPage() {
   const supabase = createClient();
@@ -71,9 +72,9 @@ export default function CustomersPage() {
   }
 
   // Handle Delete
-  const handleDelete = async (id) => {
-    if(!confirm("Apakah Anda yakin ingin menghapus data nasabah ini?")) return;
-    const { error } = await supabase.from('customers').delete().eq('id', id)
+  const handleDelete = async (data) => {
+    if(!confirm(`Apakah Anda yakin ingin menghapus data nasabah: ${data.name}?`)) return;
+    const { error } = await supabase.from('customers').delete().eq('id', data.id)
     
     if (error) {
       alert("Gagal hapus (Mungkin nasabah masih punya riwayat transaksi): " + error.message)
@@ -84,12 +85,11 @@ export default function CustomersPage() {
 
   // Handle Submit (Simpan / Update)
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault();
+    setLoading(true);
 
-    // Payload data yang akan dikirim ke DB
     const payload = {
-      name: formData.name,
+      name: groupFirstUpperCase(formData.name),
       address: formData.address,
       phone: formData.phone,
       status: formData.status
@@ -155,7 +155,7 @@ export default function CustomersPage() {
             {filteredCustomers.map((c) => (
               <tr key={c.id} className={c.status === 'non-active' ? 'bg-gray-100 text-gray-500' : ''}>
                 <td className='text-center'>
-                    <div className={`badge ${c.status === 'active' ? 'badge-success text-white' : 'badge-ghost'} badge-sm`}>
+                    <div className={`badge ${c.status === 'active' ? 'badge-success text-white' : 'badge-ghost'}`}>
                         {c.status}
                     </div>
                 </td>
@@ -175,11 +175,11 @@ export default function CustomersPage() {
                 <td className="font-mono font-bold text-success text-right truncate">Rp {c.current_balance.toLocaleString()}</td>
                 <td>
                   <div className='flex gap-2 items-center'>
-                    <button className="btn btn-xs btn-info text-white" onClick={() => handleEdit(c)}>Edit</button>
-                    <Link href={`/dashboard/customers/${c.id}`} prefetch={false} className="btn btn-xs hover:bg-primary/40 border border-primary text-primary">
+                    <button className="btn btn-sm btn-info text-white" onClick={() => handleEdit(c)}>Edit</button>
+                    <Link href={`/dashboard/customers/${c.id}`} prefetch={false} className="btn btn-sm hover:bg-primary/40 border border-primary text-primary">
                       Detail
                     </Link>
-                    <button className="btn btn-xs btn-error text-white" onClick={() => handleDelete(c.id)}>Hapus</button>  
+                    <button className="btn btn-sm btn-error text-white" onClick={() => handleDelete(c)}>Hapus</button>  
                   </div>
                 </td>
               </tr>
@@ -207,7 +207,7 @@ export default function CustomersPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4 mb-3">
+            <div className="grid lg:grid-cols-2 md:grid-cols-2 grid-cols-1 gap-3 mb-3">
                 <div className="form-control">
                     <label className="label font-semibold text-gray-700">No. Handphone (WA)</label>
                     <input 

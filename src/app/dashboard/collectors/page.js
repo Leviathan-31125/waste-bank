@@ -1,7 +1,8 @@
-'use client'
-import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase'
-import Link from 'next/link'
+'use client';
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase';
+import Link from 'next/link';
+import { groupFirstUpperCase } from '@/utils/TextModify';
 
 export default function CollectorsPage() {
   const supabase = createClient()
@@ -34,17 +35,18 @@ export default function CollectorsPage() {
     document.getElementById('modal_collector').showModal()
   }
 
-  const handleDelete = async (id) => {
-    if(!confirm("Yakin hapus data pengepul ini?")) return
-    const { error } = await supabase.from('collectors').delete().eq('id', id)
+  const handleDelete = async (data) => {
+    if(!confirm(`Yakin hapus data pengepul: ${data.name}?`)) return
+    const { error } = await supabase.from('collectors').delete().eq('id', data.id)
     if (error) alert("Gagal hapus: " + error.message)
     else fetchCollectors()
   }
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault();
+    setLoading(true);
     let error
+    formData.name = groupFirstUpperCase(formData.name)
     
     if(isEditing) {
         const { error: err } = await supabase.from('collectors').update({ name: formData.name, contact: formData.contact }).eq('id', formData.id)
@@ -127,11 +129,11 @@ export default function CollectorsPage() {
                         </td>
                         <td>
                           <div className='flex justify-center items-center gap-2'>
-                            <button className="btn btn-xs btn-info text-white" onClick={() => handleEdit(c)}>Edit</button>
-                            <Link href={`/dashboard/collectors/${c.id}`} prefetch={false} className="btn btn-xs hover:bg-primary/40 border border-primary text-primary">
+                            <button className="btn btn-sm btn-info text-white" onClick={() => handleEdit(c)}>Edit</button>
+                            <Link href={`/dashboard/collectors/${c.id}`} prefetch={false} className="btn btn-sm hover:bg-primary/40 border border-primary text-primary">
                               Detail
                             </Link>
-                            <button className="btn btn-xs btn-error text-white" onClick={() => handleDelete(c.id)}>Hapus</button>
+                            <button className="btn btn-sm btn-error text-white" onClick={() => handleDelete(c)}>Hapus</button>
                           </div>
                         </td>
                     </tr>

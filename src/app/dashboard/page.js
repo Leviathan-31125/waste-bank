@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import TopChartPage from '@/components/BarChartWasteTop5';
 
 export default function Dashboard() {
   const supabase = createClient();
@@ -69,8 +70,15 @@ export default function Dashboard() {
             </div>
         </div>
 
-        <div className="card bg-white shadow">
-            <div className="card-body">
+        <TopChartPage />
+
+        <div className="collapse collapse-arrow bg-white shadow-md border border-gray-100 rounded-box">
+            <input type="checkbox" name="my-inventory-accordion" />
+            <div className="collapse-title text-lg font-medium flex justify-between items-center pr-12">
+                <span className="font-bold text-primary">Live Stock Monitor</span>
+                <span className="bg-orange-500 text-white px-2 py-1 text-sm font-bold rounded-xl">Total Data: {stocks.length || 0}</span>
+            </div>
+            <div className="collapse-content">
                 <h2 className="card-title">Live Stock Inventory</h2>
                 <div className="overflow-x-auto">
                     <table className="table table-zebra">

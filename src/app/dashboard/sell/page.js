@@ -1,19 +1,23 @@
-'use client'
-import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+'use client';
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase';
 
 export default function SellPage() {
-  const supabase = createClient()
-  const router = useRouter()
-  
+  const supabase = createClient();
+  const SELL_MODE = ['MANUAL', 'BATCH'];
+
   // Data Handler
-  const [collectors, setCollectors] = useState([])
-  const [wasteTypes, setWasteTypes] = useState([])
-  
-  const [selectedCollector, setSelectedCollector] = useState('')
-  const [cart, setCart] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [ collectors, setCollectors ] = useState([]);
+  const [ wasteTypes, setWasteTypes ] = useState([]);
+  const [ batchs, setBatchs ] = useState([]);
+
+  // Header Info
+  const [ transDate, setTransDate ] = useState(new Date().toISOString().split('T')[0]);
+  const [ sellMode, setSellMode ] = useState('MANUAL');
+  const [ selectedBatch, setSelectedBatch ] = useState('');
+  const [ selectedCollector, setSelectedCollector ] = useState('');
+  const [ cart, setCart ] = useState([]);
+  const [ loading, setLoading ] = useState(false);
 
   const [tempItem, setTempItem] = useState('');
   const [tempUOM, setTempUOM] = useState('Pcs');
@@ -23,15 +27,56 @@ export default function SellPage() {
     const fetchData = async () => {
       const { data: col } = await supabase.from('collectors').select('*')
       const { data: waste } = await supabase.from('waste_types').select('*, uoms(name)').gt('current_stock', 0)
-      
       setCollectors(col || [])
       setWasteTypes(waste || [])
     }
-    fetchData()
+    fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, []);
+
+  useEffect(() => {
+    if (sellMode === "BATCH") fetchBatch();
+    setSelectedBatch('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sellMode]);
+
+  const fetchTransactionBatchSelected = async () => {
+    const { data: transBatch } = await supabase.from('transactions')
+    .select(`*, transaction_details(*, waste_types(id, name, sales_price, uoms(name)))`)
+    .eq('batch_id', selectedBatch);
+    
+    setCart([]);
+
+    if (transBatch.length > 0) {
+      const newCart = [];
+      transBatch.forEach(trx => {
+        if (trx.transaction_details.length > 0) {
+          trx.transaction_details.forEach(trx_dtl => {
+            newCart.push({
+              waste_type_id: trx_dtl.waste_type_id,
+              name: trx_dtl.waste_types.name,
+              price: trx_dtl.waste_types.sales_price,
+              qty: trx_dtl.qty,
+              uom: trx_dtl.waste_types.uoms.name,
+              subtotal: parseFloat(trx_dtl.waste_types.sales_price) * parseFloat(trx_dtl.qty)
+            });
+          });
+        }
+      });
+      setCart(newCart)
+    }
+  }
 
   // API Handler
+  const fetchBatch = async () => {
+    const { data: listBatch } = await supabase.from('batch_transactions')
+    .select('id, name, status')
+    .eq('status', 'CLOSE')
+    .eq('sell_status', false)
+    .order('updated_at', {ascending: false});
+    setBatchs(listBatch);
+  }
+
   const addToBatch = () => {
     if(!tempItem || !tempQty) return
     const waste = wasteTypes.find(w => w.id == tempItem)
@@ -75,13 +120,15 @@ export default function SellPage() {
     setLoading(true)
 
     try {
+      // insert transaction
       const { data: trans, error: transError } = await supabase
         .from('transactions')
         .insert({
           trans_type: 'SELL_WASTE',
           collector_id: selectedCollector,
           total_amount: grandTotal,
-          trans_date: new Date()
+          trans_date: transDate,
+          batch_id: selectedBatch || null
         })
         .select()
         .single()
@@ -96,12 +143,24 @@ export default function SellPage() {
         subtotal: item.subtotal
       }))
 
+      // insert detail transation
       const { error: detError } = await supabase.from('transaction_details').insert(detailsPayload)
       if(detError) throw detError
 
-      alert("Penjualan ke Pengepul Berhasil!")
-      router.push('/dashboard')
+      if (sellMode === 'BATCH') {
+        const { error: updateError} = await supabase.from('batch_transactions')
+        .update({ sell_status: true })
+        .eq('id', selectedBatch);
 
+        if (updateError) throw updateError;
+      }
+
+      setTransDate(new Date().toISOString().split('T')[0]);
+      setSelectedCollector('');
+      setSelectedBatch('');
+      setSellMode('MANUAL');
+      setCart([]);
+      alert("Penjualan ke Pengepul Berhasil!");
     } catch (error) {
       alert("Error: " + error.message)
     } finally {
@@ -114,21 +173,42 @@ export default function SellPage() {
       <h2 className="text-2xl font-bold mb-6">Jual Sampah ke Pengepul</h2>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Kolom Kiri: Input */}
         <div className="space-y-6">
           <div className="card bg-white shadow p-4">
-             <label className="label font-bold">Pilih Pengepul</label>
-             <select 
+            <div className='form-control'>
+              <label className="label font-bold">Pilih Pengepul</label>
+              <select 
                 className="select select-bordered w-full"
                 value={selectedCollector}
                 onChange={e => setSelectedCollector(e.target.value)}
-             >
+              >
                 <option value="">-- Pilih Pengepul --</option>
                 {collectors.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-             </select>
+              </select>
+            </div>
+            <div className="form-control w-full">
+              <label className="label font-bold">Tgl Transaksi</label>
+              <input 
+                type="date" 
+                className="input input-bordered bg-white text-black w-full"
+                value={transDate}
+                onChange={(e) => setTransDate(e.target.value)}
+              />
+            </div>
+            <div className='form-control'>
+              <label className="label font-bold">Mode Jual</label>
+              <select 
+                className="select select-bordered w-full"
+                value={sellMode}
+                onChange={e => setSellMode(e.target.value)}
+              >
+                <option value="">-- Pilih Mode --</option>
+                {SELL_MODE.map((mode, i)=> <option key={i} value={mode}>{mode}</option>)}
+              </select>
+            </div>
           </div>
 
-          <div className="card bg-white shadow p-4">
+          { sellMode === "MANUAL" && <div className="card bg-white shadow p-4">
             <h3 className="font-bold mb-4">Input Barang Keluar</h3>
             <div className="form-control mb-2">
                <label className="label">Item Tersedia</label>
@@ -149,17 +229,34 @@ export default function SellPage() {
                 <input type="number" className="input input-bordered" value={tempQty} onChange={e => { 
                   let maxQty = wasteTypes.find(w => w.id == tempItem)?.current_stock || 0;
       
-                  if (e.target.value > 0) { 
+                  if (e.target.value >= 0) { 
                     setTempQty(e.target.value > maxQty ? maxQty : e.target.value);
                   }
                   else setTempQty("");
                 }} />
             </div>
             <button className="btn btn-info text-white w-full" onClick={addToBatch} disabled={!tempItem || !tempQty}>+ Tambah ke Keranjang</button>
-          </div>
+          </div> }
+
+          { sellMode === "BATCH" && <div className="card bg-white shadow p-4">
+            <h3 className="font-bold mb-4">Pilih Batch</h3>
+            <div className="form-control mb-2">
+               <label className="label">Batch (Closed)</label>
+               <select className="select select-bordered" value={selectedBatch} onChange={e => { 
+                  setSelectedBatch(e.target.value)
+               }}>
+                 <option value="">Pilih Batch</option>
+                 {batchs.map((w, i ) => (
+                   <option key={i} value={w.id}>
+                     {w.name}
+                   </option>
+                 ))}
+               </select>
+            </div>
+            <button className="btn btn-info text-white w-full" onClick={fetchTransactionBatchSelected} disabled={!selectedBatch}>Yakin dan Pilih</button>
+          </div> }
         </div>
 
-        {/* Kolom Kanan: Summary */}
         <div className="card bg-white shadow h-fit">
           <div className="card-body">
             <h3 className="card-title">Keranjang Penjualan</h3>

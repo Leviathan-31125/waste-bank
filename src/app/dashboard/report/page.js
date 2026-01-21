@@ -7,7 +7,8 @@ import autoTable from 'jspdf-autotable'
 export default function ReportPage() {
   const supabase = createClient()
   const [transactions, setTransactions] = useState([])
-  const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0])
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0])
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0])
   
   // State untuk Fitur Baru
   const [searchTerm, setSearchTerm] = useState('')
@@ -16,12 +17,12 @@ export default function ReportPage() {
   useEffect(() => {
     fetchReport();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dateFilter])
+  }, [startDate, endDate])
 
   const fetchReport = async () => {
-    const startDate = new Date(dateFilter)
-    const endDate = new Date(dateFilter)
-    endDate.setHours(23, 59, 59, 999)
+    const startDateFilter = new Date(startDate)
+    const endDateFilter = new Date(endDate)
+    endDateFilter.setHours(23, 59, 59, 999)
 
     const { data, error } = await supabase
         .from('transactions')
@@ -29,9 +30,9 @@ export default function ReportPage() {
             qty,
             subtotal,
             waste_types (name, uoms(name))
-        )`)
-        .gte('trans_date', startDate.toISOString())
-        .lte('trans_date', endDate.toISOString())
+        ), batch_transactions(name)`)
+        .gte('trans_date', startDateFilter.toISOString())
+        .lte('trans_date', endDateFilter.toISOString())
         .order('trans_date', { ascending: false })
 
     if (data) setTransactions(data)
@@ -45,24 +46,27 @@ export default function ReportPage() {
       return (
           partyName.toLowerCase().includes(searchLower) ||
           t.trans_type.toLowerCase().includes(searchLower) ||
-          t.id.toString().includes(searchLower)
+          t.id.toString().includes(searchLower) ||
+          t.batch_transactions?.name?.toLowerCase().includes(searchLower)
       )
   })
 
   const exportPDF = () => {
     const doc = new jsPDF()
-    doc.text(`Laporan Harian Bank Sampah - ${dateFilter}`, 14, 10)
+    doc.text(`Laporan Harian Bank Sampah ${startDate} sampai ${endDate}`, 14, 10)
     
-    const tableColumn = ["ID", "Waktu", "Tipe", "Pihak Terkait", "Total (Rp)"]
+    const tableColumn = ["ID", "Waktu", "Tipe", "Pihak Terkait", "Batch", "Total (Rp)"]
     const tableRows = []
 
     filteredTransactions.forEach(t => {
         const party = t.customers?.name || t.collectors?.name || "-"
+        const batch = t.batch_transactions?.name || "-"
         const row = [
             t.id,
             new Date(t.trans_date).toLocaleTimeString(),
             t.trans_type,
             party,
+            batch,
             t.total_amount.toLocaleString()
         ]
         tableRows.push(row)
@@ -74,7 +78,7 @@ export default function ReportPage() {
         startY: 20,
     })
 
-    doc.save(`report_${dateFilter}.pdf`)
+    doc.save(`report_${startDate} to ${endDate}.pdf`)
   }
 
   const exportCSV = () => {
@@ -88,7 +92,7 @@ export default function ReportPage() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `report_${dateFilter}.csv`);
+    link.setAttribute("download", `report_${startDate} to ${endDate}.csv`);
     document.body.appendChild(link);
     link.click();
   }
@@ -98,22 +102,28 @@ export default function ReportPage() {
         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
             <h2 className="text-2xl font-bold">Daily Report</h2>
             <div className="flex flex-wrap gap-2 w-full md:w-auto justify-center">
+                {/* Search */}
                 <input 
                     type="text" 
-                    placeholder="Cari Transaksi..." 
-                    className="input input-bordered bg-white text-black w-full md:w-48"
+                    placeholder="Cari transaksi" 
+                    className="input input-bordered input-sm bg-white text-black"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
-
                 <input 
                     type="date" 
-                    className="input input-bordered bg-white text-black lg:w-max"
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
+                    className="input input-bordered input-sm bg-white text-black"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
                 />
-                <button className="btn border-success text-success" onClick={exportCSV}>CSV</button>
-                <button className="btn btn-error text-white" onClick={exportPDF}>PDF</button>
+                <input 
+                    type="date" 
+                    className="input input-bordered input-sm bg-white text-black"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                />
+                <button className="btn border-success btn-sm text-success" onClick={exportCSV}>CSV</button>
+                <button className="btn btn-error btn-sm text-white" onClick={exportPDF}>PDF</button>
             </div>
         </div>
 
@@ -124,15 +134,16 @@ export default function ReportPage() {
                         <th>Waktu</th>
                         <th>Tipe</th>
                         <th>Nasabah / Pengepul</th>
+                        <th className='text-right'>Total Amount</th>
+                        <th>Batch</th>
                         <th>Catatan</th>
-                        <th>Total Amount</th>
                         <th>Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     {filteredTransactions.map(t => (
                         <tr key={t.id} className="cursor-pointer hover:bg-gray-100" onClick={() => setSelectedTrans(t)}>
-                            <td>{new Date(t.trans_date).toLocaleTimeString()}</td>
+                            <td className='truncate'>{new Date(t.trans_date).toLocaleTimeString()}</td>
                             <td>
                                 <span className={`badge ${
                                     t.trans_type === 'DEPOSIT' ? 'badge-success text-white' : 
@@ -142,9 +153,10 @@ export default function ReportPage() {
                                 </span>
                             </td>
                             <td>{t.customers?.name || t.collectors?.name || "-"}</td>
-                            <td>{t.note || "-"}</td>
                             <td className="font-mono font-bold text-right truncate">Rp {t.total_amount.toLocaleString()}</td>
-                            <td className="text-center text-xs text-gray-400">(Klik utk Detail)</td>
+                            <td className='truncate'>{t.batch_transactions?.name || "-"}</td>
+                            <td>{t.note || "-"}</td>
+                            <td className="text-center text-xs text-gray-400 truncate">(Klik Detail)</td>
                         </tr>
                     ))}
                     {filteredTransactions.length === 0 && (

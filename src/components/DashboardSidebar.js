@@ -22,6 +22,7 @@ export default function DashboardSidebar() {
         <li><Link href="/dashboard/customers" prefetch={false} onClick={closeDrawer}>List Nasabah</Link></li>
         <li><Link href="/dashboard/collectors" prefetch={false} onClick={closeDrawer}>List Pengepul</Link></li>
         <li><Link href="/dashboard/waste-types" prefetch={false} onClick={closeDrawer}>Jenis Sampah dan Harga</Link></li>
+        <li><Link href="/dashboard/batch" prefetch={false} onClick={closeDrawer}>Batch</Link></li>
         
         <li className="menu-title">Transaksi</li>
         <li><Link href="/dashboard/deposit" prefetch={false} onClick={closeDrawer}>Deposit Sampah</Link></li>

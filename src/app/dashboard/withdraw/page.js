@@ -4,24 +4,17 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 export default function WithdrawPage() {
-  const supabase = createClient()
-  const router = useRouter()
+  const supabase = createClient();
+  const [ loading, setLoading ] = useState(false);
   
   // Data Handler
-  const [customers, setCustomers] = useState([])
-  const [selectedCustId, setSelectedCustId] = useState('')
-  const [amount, setAmount] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [currentBalance, setCurrentBalance] = useState(0)
+  const [ customers, setCustomers ] = useState([]);
+  const [ selectedCustId, setSelectedCustId ] = useState('');
+  const [ transDate, setTransDate ] = useState(new Date().toISOString().split('T')[0]);
+  const [ amount, setAmount ] = useState('');
+  const [ currentBalance, setCurrentBalance ] = useState('');
 
   useEffect(() => {
-    const fetchCustomers = async () => {
-      const { data } = await supabase
-        .from('customers')
-        .select('id, name, current_balance')
-        .eq('status', 'active')
-      setCustomers(data || [])
-    }
     fetchCustomers()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -33,7 +26,15 @@ export default function WithdrawPage() {
     } else {
       setCurrentBalance(0)
     }
-  }, [selectedCustId, customers])
+  }, [selectedCustId, customers]);
+
+  const fetchCustomers = async () => {
+    const { data } = await supabase
+      .from('customers')
+      .select('id, name, current_balance')
+      .eq('status', 'active')
+    setCustomers(data || [])
+  }
 
   const handleWithdraw = async () => {
     if (!selectedCustId || !amount) return
@@ -50,7 +51,7 @@ export default function WithdrawPage() {
         trans_type: 'WITHDRAW_CASH',
         customer_id: selectedCustId,
         total_amount: withdrawAmount,
-        trans_date: new Date(),
+        trans_date: transDate,
         note: 'Penarikan Tunai'
       })
       if (transError) throw transError
@@ -61,9 +62,12 @@ export default function WithdrawPage() {
         .eq('id', selectedCustId)
       
       if (updateError) throw updateError
+      fetchCustomers();
 
-      alert("Penarikan Berhasil!")
-      router.push('/dashboard')
+      setSelectedCustId('');
+      setAmount('');
+      setCurrentBalance(0);
+      alert("Penarikan Berhasil!");
     } catch (error) {
       console.error(error)
       alert("Gagal memproses penarikan: " + error.message)
@@ -78,7 +82,15 @@ export default function WithdrawPage() {
       
       <div className="card bg-white shadow-lg">
         <div className="card-body">
-          
+          <div className="form-control w-full">
+            <label className="label text-lg font-bold">Tgl Transaksi</label>
+            <input 
+              type="date" 
+              className="input input-bordered bg-white text-black w-full"
+              value={transDate}
+              onChange={(e) => setTransDate(e.target.value)}
+            />
+          </div>
           <div className="form-control">
             <label className="label font-bold">Pilih Nasabah</label>
             <select 
@@ -93,7 +105,7 @@ export default function WithdrawPage() {
             </select>
           </div>
 
-          <div className="stats shadow my-6 bg-base-100 border">
+          <div className="stats shadow my-3 bg-base-100 border">
             <div className="stat">
               <div className="stat-title">Saldo Saat Ini</div>
               <div className="lg:text-3xl md:text-2xl sm:text-xsl text-xl font-bold text-success">Rp {currentBalance.toLocaleString()}</div>
@@ -109,7 +121,7 @@ export default function WithdrawPage() {
               placeholder="0"
               value={amount}
               onChange={(e) => { 
-                if (e.target.value > 0) setAmount(e.target.value)
+                if (e.target.value >= 0) setAmount(e.target.value)
                 else setAmount("");
               }}
             />
@@ -119,12 +131,11 @@ export default function WithdrawPage() {
             <button 
               className={`btn bg-yellow-500 text-white w-full ${loading ? 'loading' : ''}`}
               onClick={handleWithdraw}
-              disabled={loading || !selectedCustId || !amount || parseFloat(amount) <= 0}
+              disabled={loading || !selectedCustId || !amount || parseFloat(amount) <= 0 || transDate === ""}
             >
               Proses Penarikan
             </button>
           </div>
-
         </div>
       </div>
     </div>

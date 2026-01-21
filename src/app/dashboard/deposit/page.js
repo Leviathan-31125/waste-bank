@@ -1,33 +1,40 @@
-'use client'
-import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+'use client';
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase';
 
 export default function DepositPage() {
-  const supabase = createClient()
-  const router = useRouter()
+  const supabase = createClient();
+  const [ loading, setLoading ] = useState(false);
   
   // Data Handler
-  const [customers, setCustomers] = useState([])
-  const [wasteTypes, setWasteTypes] = useState([])
+  const [ customers, setCustomers ] = useState([]);
+  const [ batchs, setBatchs ] = useState([]);
+  const [ wasteTypes, setWasteTypes ] = useState([]);
   
-  const [selectedCustomer, setSelectedCustomer] = useState('')
-  const [cart, setCart] = useState([]) // Batch items
-  const [loading, setLoading] = useState(false)
+  // Header Info
+  const [ selectedCustomer, setSelectedCustomer ] = useState('');
+  const [ selectedBatch, setSelectedBatch ] = useState('');
+  const [ transDate, setTransDate ] = useState(new Date().toISOString().split('T')[0]);
 
+  // Item Info
+  const [ cart, setCart ] = useState([]);
   const [tempItem, setTempItem] = useState('');
   const [tempUOM, setTempUOM] = useState("Pcs");
-  const [tempQty, setTempQty] = useState(1);
+  const [tempQty, setTempQty] = useState("");
 
   useEffect(() => {
     const fetchMasters = async () => {
         const { data: cust } = await supabase
         .from('customers')
         .select('id, name, current_balance')
-        .eq('status', 'active')
-        const { data: waste } = await supabase.from('waste_types').select('*, uoms(name)')
-        setCustomers(cust)
-        setWasteTypes(waste)
+        .eq('status', 'active');
+        
+        const { data: waste } = await supabase.from('waste_types').select('*, uoms(name)');
+        const { data: listBatch } = await supabase.from('batch_transactions').select('*').eq('status', 'OPEN');
+        
+        setCustomers(cust);
+        setWasteTypes(waste);
+        setBatchs(listBatch);
     }
     fetchMasters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -60,25 +67,24 @@ export default function DepositPage() {
   const grandTotal = cart.reduce((sum, item) => sum + item.subtotal, 0)
 
   const handleSubmit = async () => {
-    if(!selectedCustomer || cart.length === 0) return alert("Data belum lengkap")
+    if(!selectedCustomer || cart.length === 0) return alert("Data belum lengkap");
     setLoading(true)
 
     try {
-        // 1. Insert Header
         const { data: trans, error: transError } = await supabase
             .from('transactions')
             .insert({
                 trans_type: 'DEPOSIT',
                 customer_id: selectedCustomer,
+                batch_id: selectedBatch,
                 total_amount: grandTotal,
-                trans_date: new Date()
+                trans_date: transDate
             })
             .select()
             .single()
 
         if(transError) throw transError
 
-        // 2. Insert Details (Batch)
         const detailsPayload = cart.map(item => ({
             transaction_id: trans.id,
             waste_type_id: item.waste_type_id,
@@ -93,16 +99,21 @@ export default function DepositPage() {
 
         if(detailError) throw detailError
 
-        // 3. Update Customer Balance manually (or via trigger if setup)
-        // Disini kita update manual biar feedback UI cepat
         const currentCust = customers.find(c => c.id == selectedCustomer)
         await supabase.from('customers')
             .update({ current_balance: currentCust.current_balance + grandTotal })
             .eq('id', selectedCustomer)
 
-        alert("Transaksi Berhasil!")
-        router.push('/dashboard')
-        
+        // reset data
+        setSelectedCustomer("");
+        setSelectedBatch("");
+        setTransDate(new Date());
+
+        setCart([]);
+        setTempItem('');
+        setTempUOM("Pcs");
+        setTempQty("");
+        alert("Transaksi Berhasil!");
     } catch (error) {
         console.error(error)
         alert("Gagal menyimpan transaksi")
@@ -129,6 +140,30 @@ export default function DepositPage() {
                             <option key={c.id} value={c.id}>{c.name} (Saldo: Rp {c.current_balance.toLocaleString()})</option>
                         ))}
                     </select>
+                </div>
+                <div className='flex lg:flex-row md:flex-row flex-col gap-3'>
+                    <div className="form-control w-full">
+                        <label className="label text-lg font-bold">Pilih Batch</label>
+                        <select 
+                            className="select select-bordered w-full"
+                            value={selectedBatch}
+                            onChange={e => setSelectedBatch(e.target.value)}
+                        >
+                            <option value="">-- Pilih Batch --</option>
+                            {batchs.map(b => (
+                                <option key={b.id} value={b.id}>{b.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="form-control w-full">
+                        <label className="label text-lg font-bold">Tgl Transaksi</label>
+                        <input 
+                            type="date" 
+                            className="input input-bordered bg-white text-black w-full"
+                            value={transDate}
+                            onChange={(e) => setTransDate(e.target.value)}
+                        />
+                    </div>
                 </div>
             </div>
         </div>
@@ -160,7 +195,7 @@ export default function DepositPage() {
                             className="input input-bordered w-full" 
                             value={tempQty}
                             onChange={e => { 
-                                if (e.target.value > 0) setTempQty(e.target.value);
+                                if (e.target.value >= 0) setTempQty(e.target.value);
                                 else setTempQty("");
                             }}
                         />
@@ -204,7 +239,7 @@ export default function DepositPage() {
                 <button 
                     className={`btn btn-primary text-white w-full ${loading ? 'loading' : ''}`} 
                     onClick={handleSubmit}
-                    disabled={loading || cart.length === 0 || !selectedCustomer}
+                    disabled={loading || cart.length === 0 || !selectedCustomer || !transDate || transDate === ""}
                 >
                     Simpan Transaksi
                 </button>

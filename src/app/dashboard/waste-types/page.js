@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase';
+import { groupFirstUpperCase } from '@/utils/TextModify';
 
 export default function WasteTypesPage() {
   const supabase = createClient();
@@ -40,9 +41,9 @@ export default function WasteTypesPage() {
     document.getElementById('modal_waste').showModal()
   }
 
-  const handleDelete = async (id) => {
-    if(!confirm("Yakin hapus item ini?")) return;
-    const { error } = await supabase.from('waste_types').delete().eq('id', id)
+  const handleDelete = async (data) => {
+    if(!confirm(`Yakin hapus item: ${data.name}?`)) return;
+    const { error } = await supabase.from('waste_types').delete().eq('id', data.id)
     if(error) alert("Gagal hapus (Mungkin item sudah pernah ditransaksikan): " + error.message)
     else fetchData()
   }
@@ -50,7 +51,8 @@ export default function WasteTypesPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
-    
+    formData.name = groupFirstUpperCase(formData.name);
+
     let error;
     if(isEditing) {
         const { error: err } = await supabase.from('waste_types').update({
@@ -130,8 +132,8 @@ export default function WasteTypesPage() {
                 </td>
                 <td className='text-center'>{w.uoms?.name}</td>
                 <td className="flex justify-center gap-2">
-                    <button className="btn btn-xs btn-info text-white" onClick={() => handleEdit(w)}>Edit</button>
-                    <button className="btn btn-xs btn-error text-white" onClick={() => handleDelete(w.id)}>Hapus</button>
+                    <button className="btn btn-sm btn-info text-white" onClick={() => handleEdit(w)}>Edit</button>
+                    <button className="btn btn-sm btn-error text-white" onClick={() => handleDelete(w)}>Hapus</button>
                 </td>
               </tr>
             ))}

@@ -12,6 +12,25 @@ const formatTransactionTime = (value) =>
         minute: '2-digit',
         hour12: false,
     })
+const formatTransactionDateTime = (value) => {
+    const date = new Date(value)
+
+    const datePart = date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+    })
+
+    const timePart = date
+        .toLocaleTimeString('id-ID', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+        })
+        .replace(/[:.]/g, '.')
+
+    return `${datePart}, ${timePart}`
+}
 
 const getPartyName = (transaction) =>
     transaction.customers?.name || transaction.collectors?.name || '-'
@@ -245,7 +264,7 @@ export default function ReportPage() {
                         value={searchTerm}
                         onChange={(event) => setSearchTerm(event.target.value)}
                     />
-
+                    { }
                     <input
                         type="date"
                         className="input input-bordered input-sm bg-white text-black"
@@ -259,7 +278,7 @@ export default function ReportPage() {
                         value={endDate}
                         onChange={(event) => setEndDate(event.target.value)}
                     />
-
+                    { }
                     <button
                         className="btn btn-sm border-success text-success"
                         onClick={exportCSV}
@@ -380,8 +399,8 @@ export default function ReportPage() {
                                 <div>
                                     <p className="text-gray-500">Waktu</p>
                                     <p className="font-bold">
-                                        {new Date(selectedTrans.trans_date).toLocaleString(
-                                            'id-ID',
+                                        {formatTransactionDateTime(
+                                            selectedTrans.trans_date,
                                         )}
                                     </p>
                                 </div>
@@ -420,9 +439,9 @@ export default function ReportPage() {
                                     <table className="table table-compact w-full">
                                         <thead>
                                             <tr>
-                                                <th>Item Sampah</th>
+                                                <th>Jenis Sampah</th>
                                                 <th>Jml</th>
-                                                <th className="text-right">Subtotal</th>
+                                                <th className="text-right">Subtotal (Rp)</th>
                                             </tr>
                                         </thead>
 
@@ -436,7 +455,7 @@ export default function ReportPage() {
                                                             {detail.waste_types?.uoms.name}
                                                         </td>
                                                         <td className="truncate text-right">
-                                                            Rp{' '}
+                                                            {' '}
                                                             {formatNumberID(detail.subtotal, {
                                                                 maximumFractionDigits: 0,
                                                             })}

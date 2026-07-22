@@ -268,7 +268,9 @@ export default function CustomerPortalPage() {
                       </div>
 
                       <p
-                        className={`text-right text-lg font-bold sm:text-xl ${isDeposit ? 'text-success' : 'text-error'
+                        className={
+                          `text-right text-lg font-bold sm:text-xl 
+                          ${isDeposit ? 'text-success' : 'text-error'
                           }`}
                       >
                         {change >= 0 ? '+' : '-'}

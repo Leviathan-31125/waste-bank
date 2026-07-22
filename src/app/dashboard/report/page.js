@@ -1,284 +1,484 @@
 'use client'
-import { useState, useEffect } from 'react'
+
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { formatNumberID } from '@/utils/numberFormat'
+
+const formatTransactionTime = (value) =>
+    new Date(value).toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+    })
+
+const getPartyName = (transaction) =>
+    transaction.customers?.name || transaction.collectors?.name || '-'
+
+const getShortName = (name) => {
+    const words = String(name || '-')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+
+    if (words.length === 0) return '-'
+    return words.slice(0, 2).join(' ')
+}
+
+const getTransactionType = (type) => {
+    if (type === 'DEPOSIT') {
+        return {
+            shortLabel: 'Setor',
+            fullLabel: 'Setor Sampah',
+            badgeClass: 'badge-success badge-outline',
+        }
+    }
+
+    if (type === 'WITHDRAW_CASH') {
+        return {
+            shortLabel: 'Tarik',
+            fullLabel: 'Tarik Tunai',
+            badgeClass: 'badge-warning text-white',
+        }
+    }
+
+    return {
+        shortLabel: 'Jual',
+        fullLabel: 'Jual Sampah',
+        badgeClass: 'badge-info badge-outline',
+    }
+}
 
 export default function ReportPage() {
-  const supabase = createClient();
-  const [ loading, setLoading ] = useState(false);
-  const [ transactions, setTransactions ] = useState([])
-  const [ startDate, setStartDate ] = useState(new Date().toISOString().split('T')[0])
-  const [ endDate, setEndDate ] = useState(new Date().toISOString().split('T')[0])
-  
-  // State untuk Fitur Baru
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedTrans, setSelectedTrans] = useState(null) // Untuk pop-up detail
+    const supabase = createClient()
+    const [loading, setLoading] = useState(false)
+    const [transactions, setTransactions] = useState([])
+    const [startDate, setStartDate] = useState(
+        new Date().toISOString().split('T')[0],
+    )
+    const [endDate, setEndDate] = useState(
+        new Date().toISOString().split('T')[0],
+    )
+    const [searchTerm, setSearchTerm] = useState('')
+    const [selectedTrans, setSelectedTrans] = useState(null)
 
-  useEffect(() => {
-    fetchReport();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, endDate])
+    useEffect(() => {
+        fetchReport()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [startDate, endDate])
 
-  const fetchReport = async () => {
-    const startDateFilter = new Date(startDate)
-    const endDateFilter = new Date(endDate)
-    endDateFilter.setHours(23, 59, 59, 999)
+    const fetchReport = async () => {
+        const startDateFilter = new Date(startDate)
+        const endDateFilter = new Date(endDate)
+        endDateFilter.setHours(23, 59, 59, 999)
 
-    const { data, error } = await supabase
-        .from('transactions')
-        .select(`*, customers(name), collectors(name), transaction_details (
-            id,
-            qty,
-            subtotal,
-            waste_types (name, uoms(name))
-        ), batch_transactions(name)`)
-        .gte('trans_date', startDateFilter.toISOString())
-        .lte('trans_date', endDateFilter.toISOString())
-        .order('trans_date', { ascending: false })
+        const { data, error } = await supabase
+            .from('transactions')
+            .select(`*, customers(name), collectors(name), transaction_details (
+        id,
+        qty,
+        subtotal,
+        waste_types (name, uoms(name))
+      ), batch_transactions(name)`)
+            .gte('trans_date', startDateFilter.toISOString())
+            .lte('trans_date', endDateFilter.toISOString())
+            .order('trans_date', { ascending: false })
 
-    if (data) setTransactions(data)
-  }
+        if (error) {
+            console.error('Gagal mengambil riwayat transaksi:', error)
+            setTransactions([])
+            return
+        }
 
-  // Filter Handler
-  const filteredTransactions = transactions.filter(t => {
-      const searchLower = searchTerm.toLowerCase()
-      const partyName = t.customers?.name || t.collectors?.name || ""
-      
-      return (
-          partyName.toLowerCase().includes(searchLower) ||
-          t.trans_type.toLowerCase().includes(searchLower) ||
-          t.id.toString().includes(searchLower) ||
-          t.batch_transactions?.name?.toLowerCase().includes(searchLower)
-      )
-  })
-
-  const exportPDF = () => {
-    const doc = new jsPDF()
-    doc.text(`Laporan Harian Bank Sampah ${startDate} sampai ${endDate}`, 14, 10)
-    
-    const tableColumn = ["ID", "Waktu", "Tipe", "Pihak Terkait", "Batch", "Total (Rp)"]
-    const tableRows = []
-
-    filteredTransactions.forEach(t => {
-        const party = t.customers?.name || t.collectors?.name || "-"
-        const batch = t.batch_transactions?.name || "-"
-        const row = [
-            t.id,
-            new Date(t.trans_date).toLocaleTimeString(),
-            t.trans_type,
-            party,
-            batch,
-            t.total_amount.toLocaleString()
-        ]
-        tableRows.push(row)
-    })
-
-    autoTable(doc, {
-        head: [tableColumn],
-        body: tableRows,
-        startY: 20,
-    })
-
-    doc.save(`report_${startDate} to ${endDate}.pdf`)
-  }
-
-  const exportCSV = () => {
-    let csvContent = "data:text/csv;charset=utf-8," 
-        + "ID,Waktu,Tipe,Pihak,Total\n"
-        + filteredTransactions.map(t => {
-            const party = t.customers?.name || t.collectors?.name || "-"
-            return `${t.id},${t.trans_date},${t.trans_type},${party},${t.total_amount}`
-        }).join("\n");
-        
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `report_${startDate} to ${endDate}.csv`);
-    document.body.appendChild(link);
-    link.click();
-  }
-
-  const handleRollback = async (data) => {
-    if(!confirm(`Yakin hapus data transaksi: ${data.trans_type} - ${data.customers?.name || data.collectors?.name}?`)) return
-    setLoading(true)
-
-    try {
-        const trans_details_ids = data.transaction_details.map(td => td.id);
-
-        // Delete Transaction Details
-        const { error: detailError } = await supabase
-        .from('transaction_details')
-        .delete()
-        .in('id', trans_details_ids);
-
-        if(detailError) throw detailError;
-
-        // Delete Transaction
-        const { data: trans, error: transError } = await supabase
-        .from('transactions')
-        .delete()
-        .eq('id', data.id);
-
-        if(transError) throw transError
-
-        // Update Customer Balanace jika Deposit atau Withdraw Cash
-        if (data.trans_type === "DEPOSIT") {
-            const { error } = await supabase.rpc('update_balance', { 
-                user_id: data.customer_id, 
-                amount: (data.total_amount * -1)
-            });
-
-            if (error) throw error;
-        } 
-
-        if (data.trans_type === "WITHDRAW_CASH") {
-            const { error } = await supabase.rpc('update_balance', { 
-                user_id: data.customer_id, 
-                amount: (data.total_amount)
-            });
-
-            if (error) throw error;
-        } 
-
-        fetchReport();
-        setSelectedTrans(null);
-        alert("Delete Transaksi Berhasil!");
-    } catch (error) {
-        console.error(error)
-        alert("Gagal delete transaksi")
-    } finally {
-        setLoading(false)
+        setTransactions(data || [])
     }
-  }
 
-  return (
-    <div>
-        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-            <h2 className="text-2xl font-bold">Daily Report</h2>
-            <div className="flex flex-wrap gap-2 w-full md:w-auto justify-center">
-                {/* Search */}
-                <input 
-                    type="text" 
-                    placeholder="Cari transaksi" 
-                    className="input input-bordered input-sm bg-white text-black"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <input 
-                    type="date" 
-                    className="input input-bordered input-sm bg-white text-black"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                />
-                <input 
-                    type="date" 
-                    className="input input-bordered input-sm bg-white text-black"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                />
-                <button className="btn border-success btn-sm text-success" onClick={exportCSV}>CSV</button>
-                <button className="btn btn-error btn-sm text-white" onClick={exportPDF}>PDF</button>
-            </div>
-        </div>
+    const filteredTransactions = transactions.filter((transaction) => {
+        const searchLower = searchTerm.toLowerCase()
+        const partyName = getPartyName(transaction)
 
-        <div className="overflow-x-auto bg-white shadow rounded-box">
-            <table className="table table-zebra table-hover">
-                <thead>
-                    <tr>
-                        <th>Waktu</th>
-                        <th className='text-center'>Tipe</th>
-                        <th>Nasabah / Pengepul</th>
-                        <th className='text-right'>Total Amount</th>
-                        <th>Batch</th>
-                        <th>Catatan</th>
-                        <th className='text-center'>Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {filteredTransactions.map(t => (
-                        <tr key={t.id} className="cursor-pointer hover:bg-gray-100" onClick={() => setSelectedTrans(t)}>
-                            <td className='truncate'>{new Date(t.trans_date).toLocaleTimeString()}</td>
-                            <td className='text-center truncate'>
-                                {t.trans_type === 'DEPOSIT' ? ( <span className="badge badge-success badge-outline">Setor Sampah</span> ) 
-                                : t.trans_type === 'WITHDRAW_CASH' ? ( <span className="badge badge-warning text-white">Tarik Tunai</span> ) 
-                                : ( <span className="badge badge-info badge-outline">Jual Sampah</span> )}
-                            </td>
-                            <td>{t.customers?.name || t.collectors?.name || "-"}</td>
-                            <td className="font-mono font-bold text-right truncate">Rp {t.total_amount.toLocaleString()}</td>
-                            <td className='truncate'>{t.batch_transactions?.name || "-"}</td>
-                            <td>{t.note || "-"}</td>
-                            <td className="text-center text-xs text-gray-400 truncate">(Klik Detail)</td>
-                        </tr>
-                    ))}
-                    {filteredTransactions.length === 0 && (
-                        <tr><td colSpan="6" className="text-center py-4 italic text-gray-400">Data tidak ditemukan.</td></tr>
-                    )}
-                </tbody>
-            </table>
-        </div>
+        return (
+            partyName.toLowerCase().includes(searchLower) ||
+            transaction.trans_type.toLowerCase().includes(searchLower) ||
+            transaction.id.toString().includes(searchLower) ||
+            transaction.batch_transactions?.name
+                ?.toLowerCase()
+                .includes(searchLower)
+        )
+    })
 
-        <dialog className={`modal ${selectedTrans ? 'modal-open' : ''}`}>
-            <div className="modal-box bg-white text-black max-w-3xl">
-                <h3 className="font-bold text-lg mb-4">Detail Transaksi #{selectedTrans?.id}</h3>
-                
-                {selectedTrans && (
-                    <>
-                        <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-                            <div>
-                                <p className="text-gray-500">Waktu</p>
-                                <p className="font-bold">{new Date(selectedTrans.trans_date).toLocaleString()}</p>
-                            </div>
-                            <div>
-                                <p className="text-gray-500">Pihak Terkait</p>
-                                <p className="font-bold">{selectedTrans.customers?.name || selectedTrans.collectors?.name || "Umum"}</p>
-                            </div>
-                            <div>
-                                <p className="text-gray-500">Tipe</p>
-                                <p className="font-bold">{selectedTrans.trans_type}</p>
-                            </div>
-                            <div>
-                                <p className="text-gray-500">Total Transaksi</p>
-                                <p className="font-bold text-lg text-primary">Rp {selectedTrans.total_amount.toLocaleString()}</p>
-                            </div>
-                        </div>
+    const exportPDF = () => {
+        const doc = new jsPDF()
+        doc.text(
+            `Riwayat Transaksi ${startDate} sampai ${endDate}`,
+            14,
+            10,
+        )
 
-                        <div className="divider">Rincian Item</div>
+        const tableColumn = ['Waktu', 'Tipe', 'Nama', 'Total (Rp)', 'Batch']
+        const tableRows = filteredTransactions.map((transaction) => {
+            const transactionType = getTransactionType(transaction.trans_type)
 
-                        {selectedTrans.trans_type === 'WITHDRAW_CASH' ? (
-                            <p className="text-center italic text-gray-500 py-4">Penarikan Tunai (Tidak ada item fisik)</p>
-                        ) : (
-                            <table className="table table-compact w-full">
-                                <thead>
-                                    <tr>
-                                        <th>Item Sampah</th>
-                                        <th>Qty</th>
-                                        <th className="text-right">Subtotal</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {selectedTrans.transaction_details?.map((detail, idx) => (
-                                        <tr key={idx}>
-                                            <td>{detail.waste_types?.name}</td>
-                                            <td>{detail.qty} {detail.waste_types?.uoms.name}</td>
-                                            <td className="text-right truncate">Rp {detail.subtotal.toLocaleString()}</td>
-                                        </tr>
-                                    ))}
-                                    {(!selectedTrans.transaction_details || selectedTrans.transaction_details.length === 0) && (
-                                        <tr><td colSpan="3" className="text-center">Tidak ada detail item</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        )}
-                    </>
-                )}
+            return [
+                formatTransactionTime(transaction.trans_date),
+                transactionType.fullLabel,
+                getShortName(getPartyName(transaction)),
+                formatNumberID(transaction.total_amount, {
+                    maximumFractionDigits: 0,
+                }),
+                transaction.batch_transactions?.name || '-',
+            ]
+        })
 
-                <div className="modal-action">
-                    <button className="btn btn-error text-white" disabled={loading} onClick={() => handleRollback(selectedTrans)}>Hapus</button>
-                    <button className="btn" disabled={loading} onClick={() => setSelectedTrans(null)}>Tutup</button>
+        autoTable(doc, {
+            head: [tableColumn],
+            body: tableRows,
+            startY: 20,
+        })
+
+        doc.save(`riwayat_transaksi_${startDate}_sampai_${endDate}.pdf`)
+    }
+
+    const exportCSV = () => {
+        const csvContent =
+            'data:text/csv;charset=utf-8,\uFEFF' +
+            'Waktu;Tipe;Nama;Total (Rp);Batch\n' +
+            filteredTransactions
+                .map((transaction) => {
+                    const transactionType = getTransactionType(transaction.trans_type)
+                    const name = getShortName(getPartyName(transaction))
+                    const total = formatNumberID(transaction.total_amount, {
+                        maximumFractionDigits: 0,
+                    })
+                    const batch = transaction.batch_transactions?.name || '-'
+
+                    return `${formatTransactionTime(transaction.trans_date)};${transactionType.fullLabel};${name};${total};${batch}`
+                })
+                .join('\n')
+
+        const encodedUri = encodeURI(csvContent)
+        const link = document.createElement('a')
+        link.setAttribute('href', encodedUri)
+        link.setAttribute(
+            'download',
+            `riwayat_transaksi_${startDate}_sampai_${endDate}.csv`,
+        )
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+    }
+
+    const handleRollback = async (data) => {
+        const partyName = getPartyName(data)
+
+        if (
+            !confirm(
+                `Yakin hapus data transaksi: ${data.trans_type} - ${partyName}?`,
+            )
+        ) {
+            return
+        }
+
+        setLoading(true)
+
+        try {
+            const transactionDetailIds = (data.transaction_details || []).map(
+                (detail) => detail.id,
+            )
+
+            if (transactionDetailIds.length > 0) {
+                const { error: detailError } = await supabase
+                    .from('transaction_details')
+                    .delete()
+                    .in('id', transactionDetailIds)
+
+                if (detailError) throw detailError
+            }
+
+            const { error: transactionError } = await supabase
+                .from('transactions')
+                .delete()
+                .eq('id', data.id)
+
+            if (transactionError) throw transactionError
+
+            if (data.trans_type === 'DEPOSIT') {
+                const { error } = await supabase.rpc('update_balance', {
+                    user_id: data.customer_id,
+                    amount: data.total_amount * -1,
+                })
+
+                if (error) throw error
+            }
+
+            if (data.trans_type === 'WITHDRAW_CASH') {
+                const { error } = await supabase.rpc('update_balance', {
+                    user_id: data.customer_id,
+                    amount: data.total_amount,
+                })
+
+                if (error) throw error
+            }
+
+            await fetchReport()
+            setSelectedTrans(null)
+            alert('Delete Transaksi Berhasil!')
+        } catch (error) {
+            console.error(error)
+            alert('Gagal delete transaksi')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    return (
+        <div>
+            <div className="mb-6 flex flex-col items-center justify-between gap-4 md:flex-row">
+                <h2 className="text-2xl font-bold">Riwayat Transaksi</h2>
+
+                <div className="flex w-full flex-wrap justify-center gap-2 md:w-auto">
+                    <input
+                        type="text"
+                        placeholder="Cari transaksi"
+                        className="input input-bordered input-sm bg-white text-black"
+                        value={searchTerm}
+                        onChange={(event) => setSearchTerm(event.target.value)}
+                    />
+
+                    <input
+                        type="date"
+                        className="input input-bordered input-sm bg-white text-black"
+                        value={startDate}
+                        onChange={(event) => setStartDate(event.target.value)}
+                    />
+
+                    <input
+                        type="date"
+                        className="input input-bordered input-sm bg-white text-black"
+                        value={endDate}
+                        onChange={(event) => setEndDate(event.target.value)}
+                    />
+
+                    <button
+                        className="btn btn-sm border-success text-success"
+                        onClick={exportCSV}
+                    >
+                        CSV
+                    </button>
+
+                    <button
+                        className="btn btn-error btn-sm text-white"
+                        onClick={exportPDF}
+                    >
+                        PDF
+                    </button>
                 </div>
             </div>
-        </dialog>
-    </div>
-  )
+
+            <div className="overflow-hidden rounded-box bg-white shadow">
+                <table className="table table-fixed table-zebra table-hover w-full text-[10px] sm:text-sm">
+                    <colgroup>
+                        <col className="w-[14%]" />
+                        <col className="w-[20%]" />
+                        <col className="w-[24%]" />
+                        <col className="w-[24%]" />
+                        <col className="w-[18%]" />
+                    </colgroup>
+
+                    <thead>
+                        <tr>
+                            <th className="!px-1 !py-2 sm:!px-3">Jam</th>
+                            <th className="!px-1 !py-2 sm:!px-3">Nama</th>
+                            <th className="!px-1 !py-2 text-center sm:!px-3">
+                                Total (Rp)
+                            </th>
+                            <th className="!px-1 !py-2 text-center sm:!px-3">Tipe</th>
+                            <th className="!px-1 !py-2 sm:!px-3">Batch</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {filteredTransactions.map((transaction) => {
+                            const fullName = getPartyName(transaction)
+                            const shortName = getShortName(fullName)
+                            const transactionType = getTransactionType(
+                                transaction.trans_type,
+                            )
+                            const batchName = transaction.batch_transactions?.name || '-'
+
+                            return (
+                                <tr
+                                    key={transaction.id}
+                                    className="cursor-pointer hover:bg-gray-100"
+                                    onClick={() => setSelectedTrans(transaction)}
+                                >
+                                    <td className="!px-1 !py-2 font-medium sm:!px-3">
+                                        {formatTransactionTime(transaction.trans_date)}
+                                    </td>
+
+                                    <td
+                                        className="!px-1 !py-2 truncate sm:!px-3"
+                                        title={fullName}
+                                    >
+                                        {shortName}
+                                    </td>
+
+                                    <td className="!px-1 !py-2 truncate text-right font-mono font-bold sm:!px-3">
+                                        {formatNumberID(transaction.total_amount, {
+                                            maximumFractionDigits: 0,
+                                        })}
+                                    </td>
+
+                                    <td className="!px-1 !py-2 text-center sm:!px-3">
+                                        <span
+                                            className={`badge badge-xs max-w-full truncate px-1 text-[9px] sm:badge-sm sm:px-2 sm:text-xs ${transactionType.badgeClass}`}
+                                            title={transactionType.fullLabel}
+                                        >
+                                            <span className="sm:hidden">
+                                                {transactionType.shortLabel}
+                                            </span>
+                                            <span className="hidden sm:inline">
+                                                {transactionType.fullLabel}
+                                            </span>
+                                        </span>
+                                    </td>
+
+                                    <td
+                                        className="!px-1 !py-2 truncate sm:!px-3"
+                                        title={batchName}
+                                    >
+                                        {batchName}
+                                    </td>
+                                </tr>
+                            )
+                        })}
+
+                        {filteredTransactions.length === 0 && (
+                            <tr>
+                                <td
+                                    colSpan="5"
+                                    className="py-4 text-center italic text-gray-400"
+                                >
+                                    Data tidak ditemukan.
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            <dialog className={`modal ${selectedTrans ? 'modal-open' : ''}`}>
+                <div className="modal-box max-w-3xl bg-white text-black">
+                    <h3 className="mb-4 text-lg font-bold">
+                        Detail Transaksi #{selectedTrans?.id}
+                    </h3>
+
+                    {selectedTrans && (
+                        <>
+                            <div className="mb-4 grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
+                                <div>
+                                    <p className="text-gray-500">Waktu</p>
+                                    <p className="font-bold">
+                                        {new Date(selectedTrans.trans_date).toLocaleString(
+                                            'id-ID',
+                                        )}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p className="text-gray-500">Pihak Terkait</p>
+                                    <p className="font-bold">{getPartyName(selectedTrans)}</p>
+                                </div>
+
+                                <div>
+                                    <p className="text-gray-500">Tipe</p>
+                                    <p className="font-bold">
+                                        {getTransactionType(selectedTrans.trans_type).fullLabel}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p className="text-gray-500">Total Transaksi</p>
+                                    <p className="text-lg font-bold text-primary">
+                                        Rp{' '}
+                                        {formatNumberID(selectedTrans.total_amount, {
+                                            maximumFractionDigits: 0,
+                                        })}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="divider">Rincian Item</div>
+
+                            {selectedTrans.trans_type === 'WITHDRAW_CASH' ? (
+                                <p className="py-4 text-center italic text-gray-500">
+                                    Penarikan Tunai (Tidak ada item fisik)
+                                </p>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="table table-compact w-full">
+                                        <thead>
+                                            <tr>
+                                                <th>Item Sampah</th>
+                                                <th>Jml</th>
+                                                <th className="text-right">Subtotal</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody>
+                                            {selectedTrans.transaction_details?.map(
+                                                (detail, index) => (
+                                                    <tr key={detail.id || index}>
+                                                        <td>{detail.waste_types?.name}</td>
+                                                        <td>
+                                                            {formatNumberID(detail.qty)}{' '}
+                                                            {detail.waste_types?.uoms.name}
+                                                        </td>
+                                                        <td className="truncate text-right">
+                                                            Rp{' '}
+                                                            {formatNumberID(detail.subtotal, {
+                                                                maximumFractionDigits: 0,
+                                                            })}
+                                                        </td>
+                                                    </tr>
+                                                ),
+                                            )}
+
+                                            {(!selectedTrans.transaction_details ||
+                                                selectedTrans.transaction_details.length === 0) && (
+                                                    <tr>
+                                                        <td colSpan="3" className="text-center">
+                                                            Tidak ada detail item
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </>
+                    )}
+
+                    <div className="modal-action">
+                        <button
+                            className="btn btn-error text-white"
+                            disabled={loading}
+                            onClick={() => handleRollback(selectedTrans)}
+                        >
+                            Hapus
+                        </button>
+
+                        <button
+                            className="btn"
+                            disabled={loading}
+                            onClick={() => setSelectedTrans(null)}
+                        >
+                            Tutup
+                        </button>
+                    </div>
+                </div>
+            </dialog>
+        </div>
+    )
 }

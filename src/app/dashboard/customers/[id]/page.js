@@ -1,117 +1,191 @@
-'use client'
-import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase'
-import { useParams, useRouter } from 'next/navigation'
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase';
 
 export default function CustomerDetailPage() {
-  const { id } = useParams() // Ambil ID dari URL
-  const router = useRouter()
-  const supabase = createClient()
+    const { id } = useParams();
+    const router = useRouter();
+    const supabase = createClient();
 
-  const [customer, setCustomer] = useState(null)
-  const [transactions, setTransactions] = useState([])
-  
-  useEffect(() => {
-    if(id) fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id])
+    const [customer, setCustomer] = useState(null);
+    const [transactions, setTransactions] = useState([]);
 
-  const fetchData = async () => {
-    const { data: cust } = await supabase.from('customers').select('*').eq('id', id).single()
-    setCustomer(cust)
-    const { data: trans } = await supabase
-        .from('transactions')
-        .select(`*, transaction_details (*, waste_types (name, uoms(name)))`)
-        .eq('customer_id', id)
-        .order('trans_date', { ascending: false })
-    
-    setTransactions(trans || [])
-  }
+    useEffect(() => {
+        if (id) fetchData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id]);
 
-  if (!customer) return <div className='w-full h-screen flex items-center justify-center italic text-gray-400'>Loading data...</div>
-  // Helper untuk Link WhatsApp
-  const getWaLink = (phone) => {
-    if(!phone) return '#'
-    let cleanNum = phone.replace(/\D/g, '') // Hapus karakter selain angka
-    if (cleanNum.startsWith('0')) {
-        cleanNum = '62' + cleanNum.slice(1) // Ubah 08xx jadi 628xx
+    const fetchData = async () => {
+        const { data: customerData } = await supabase
+            .from('customers')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        setCustomer(customerData);
+
+        const { data: transactionData } = await supabase
+            .from('transactions')
+            .select('*, transaction_details (*, waste_types (name, uoms(name)))')
+            .eq('customer_id', id)
+            .order('trans_date', { ascending: false });
+
+        setTransactions(transactionData || []);
+    };
+
+    const getWaLink = (phone) => {
+        if (!phone) return '#';
+
+        let cleanNum = phone.replace(/\D/g, '');
+
+        if (cleanNum.startsWith('0')) {
+            cleanNum = `62${cleanNum.slice(1)}`;
+        }
+
+        return `https://wa.me/${cleanNum}`;
+    };
+
+    if (!customer) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center italic text-gray-400">
+                Loading data...
+            </div>
+        );
     }
-    return `https://wa.me/${cleanNum}`
-  }
 
-  return (
-    <div>
-        <button onClick={() => router.back()} className="btn btn-ghost lg:mb-4 md:mb-3 mb-2">← Kembali</button>
-        
-        <div className="card bg-white shadow-lg mb-8">
-            <div className="card-body lg:flex-row md:flex-row flex-col justify-between lg:items-center md:items-center">
-                <div>
-                    <h2 className="card-title lg:text-3xl md:text-3xl sm:text-2xl text-xl">{customer.name}</h2>
-                    <span className="text-base">{customer.phone || "-"}</span>
-                    <a href={getWaLink(customer.phone)} target="_blank" rel="noopener noreferrer" 
-                        className="text-xs text-green-600 hover:text-green-800 font-bold flex items-center gap-1 mb-3">
-                        Chat WA ↗
-                    </a>
-                    <p className="text-gray-500 lg:text-base md:text-base text-sm">{customer.address}</p>
-                    <div className="badge badge-primary text-white mt-2">Nasabah</div>
+    return (
+        <div>
+            <button
+                type="button"
+                onClick={() => router.back()}
+                className="btn btn-ghost mb-2 md:mb-3 lg:mb-4"
+            >
+                ← Kembali
+            </button>
+
+            <div className="card relative mb-8 bg-white shadow-lg">
+                <div className="absolute right-5 top-5 z-10">
+                    <div className="badge badge-primary text-white">Nasabah</div>
                 </div>
-                <hr className='lg:hidden md:hidden border border-gray-200 mt-2'/>
-                <div className="text-right">
-                    <div className="text-sm text-gray-500">Saldo Aktif</div>
-                    <div className="lg:text-4xl md:text-4xl sm:text-3xl text-2xl font-bold text-success">Rp {customer.current_balance.toLocaleString()}</div>
+
+                <div className="card-body flex-col justify-between pt-16 md:flex-row md:items-center md:pt-8 lg:flex-row lg:items-center lg:pt-8">
+                    <div className="md:pr-8 lg:pr-8">
+                        <h2 className="card-title pr-20 text-xl sm:text-2xl md:pr-0 md:text-3xl lg:pr-0 lg:text-3xl">
+                            {customer.name}
+                        </h2>
+
+                        <span className="text-base">{customer.phone || '-'}</span>
+
+                        {customer.phone && (
+                            <a
+                                href={getWaLink(customer.phone)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mb-3 flex items-center gap-1 text-xs font-bold text-green-600 hover:text-green-800"
+                            >
+                                Chat WA ↗
+                            </a>
+                        )}
+
+                        <p className="text-sm text-gray-500 md:text-base lg:text-base">
+                            {customer.address}
+                        </p>
+                    </div>
+
+                    <hr className="mt-4 border border-gray-200 md:hidden lg:hidden" />
+
+                    <div className="mt-4 text-left md:mt-7 md:text-right lg:mt-7 lg:text-right">
+                        <div className="text-sm text-gray-500">Saldo</div>
+                        <div className="text-2xl font-bold text-success sm:text-3xl md:text-4xl lg:text-4xl">
+                            Rp {Number(customer.current_balance || 0).toLocaleString('id-ID')}
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <h3 className="text-xl font-bold mb-4">Riwayat Transaksi</h3>
-        <div className="overflow-x-auto bg-white shadow rounded-box overflow-hidden">
-            <table className="table table-zebra">
-                <thead>
-                    <tr>
-                        <th>Tanggal</th>
-                        <th className='text-center'>Tipe</th>
-                        <th>Batch</th>
-                        <th>Detail Item (Sampah)</th>
-                        <th className="text-right">Nominal</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {transactions.map(t => (
-                        <tr key={t.id}>
-                            <td className="truncate whitespace-nowrap">
-                                {new Date(t.trans_date).toLocaleDateString()} <br/>
-                                <span className="text-xs text-gray-500">{new Date(t.trans_date).toLocaleTimeString()}</span>
-                            </td>
-                            <td className="text-center truncate">
-                                {t.trans_type === 'DEPOSIT' ? (
-                                    <span className="badge badge-success badge-outline">Setor Sampah</span>
-                                ) : (
-                                    <span className="badge badge-warning text-white">Tarik Tunai</span>
-                                )}
-                            </td>
-                            <td className='truncate'>{t.batch_transactions?.name || "-"}</td>
-                            <td className="truncate">
-                                {t.trans_type === 'WITHDRAW_CASH' ? (
-                                    <span className="italic text-gray-500">Penarikan Saldo Tunai</span>
-                                ) : (
-                                    <ul className="list-disc list-inside text-sm">
-                                        {t.transaction_details?.map(d => (
-                                            <li key={d.id}>
-                                                {d.waste_types?.name} ({d.qty} {d.waste_types.uoms.name}) @{d.snapshot_price.toLocaleString()} - Rp {d.subtotal.toLocaleString()}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-                            </td>
-                            <td className={`text-right truncate font-bold ${t.trans_type === 'DEPOSIT' ? 'text-success' : 'text-error'}`}>
-                                {t.trans_type === 'DEPOSIT' ? '+' : '-'} Rp {t.total_amount.toLocaleString()}
-                            </td>
+            <h3 className="mb-4 text-xl font-bold">Riwayat Transaksi</h3>
+
+            <div className="overflow-x-auto overflow-hidden rounded-box bg-white shadow">
+                <table className="table table-zebra">
+                    <thead>
+                        <tr>
+                            <th>Tanggal</th>
+                            <th className="text-center">Tipe</th>
+                            <th>Batch</th>
+                            <th>Detail Item (Sampah)</th>
+                            <th className="text-right">Nominal</th>
                         </tr>
-                    ))}
-                    {transactions.length === 0 && <tr><td colSpan="4" className="text-center p-4 italic text-gray-400">Belum ada riwayat transaksi</td></tr>}
-                </tbody>
-            </table>
+                    </thead>
+
+                    <tbody>
+                        {transactions.map((transaction) => (
+                            <tr key={transaction.id}>
+                                <td className="truncate whitespace-nowrap">
+                                    {new Date(transaction.trans_date).toLocaleDateString('id-ID')}
+                                    <br />
+                                    <span className="text-xs text-gray-500">
+                                        {new Date(transaction.trans_date).toLocaleTimeString('id-ID')}
+                                    </span>
+                                </td>
+
+                                <td className="truncate text-center">
+                                    {transaction.trans_type === 'DEPOSIT' ? (
+                                        <span className="badge badge-success badge-outline">
+                                            Setor Sampah
+                                        </span>
+                                    ) : (
+                                        <span className="badge badge-warning text-white">Tarik Tunai</span>
+                                    )}
+                                </td>
+
+                                <td className="truncate">
+                                    {transaction.batch_transactions?.name || '-'}
+                                </td>
+
+                                <td className="truncate">
+                                    {transaction.trans_type === 'WITHDRAW_CASH' ? (
+                                        <span className="italic text-gray-500">
+                                            Penarikan Saldo Tunai
+                                        </span>
+                                    ) : (
+                                        <ul className="list-inside list-disc text-sm">
+                                            {transaction.transaction_details?.map((detail) => (
+                                                <li key={detail.id}>
+                                                    {detail.waste_types?.name} (
+                                                    {Number(detail.qty).toLocaleString('id-ID')}{' '}
+                                                    {detail.waste_types.uoms.name}) @
+                                                    {Number(detail.snapshot_price).toLocaleString('id-ID')} - Rp{' '}
+                                                    {Number(detail.subtotal).toLocaleString('id-ID')}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </td>
+
+                                <td
+                                    className={`truncate text-right font-bold ${transaction.trans_type === 'DEPOSIT'
+                                            ? 'text-success'
+                                            : 'text-error'
+                                        }`}
+                                >
+                                    {transaction.trans_type === 'DEPOSIT' ? '+' : '-'} Rp{' '}
+                                    {Number(transaction.total_amount).toLocaleString('id-ID')}
+                                </td>
+                            </tr>
+                        ))}
+
+                        {transactions.length === 0 && (
+                            <tr>
+                                <td colSpan="5" className="p-4 text-center italic text-gray-400">
+                                    Belum ada riwayat transaksi
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
-  )
+    );
 }

@@ -63,7 +63,7 @@ export default function CollectorDetailPage() {
                 <hr className='lg:hidden md:hidden border border-gray-200 mt-2'/>
                 <div className="text-right">
                     <div className="text-sm text-gray-500">Total Penjualan</div>
-                    <div className="lg:text-4xl md:text-4xl sm:text-3xl text-2xl font-bold text-success">Rp {totalOmzet.toLocaleString()}</div>
+                    <div className="lg:text-4xl md:text-4xl sm:text-3xl text-2xl font-bold text-success">Rp {totalOmzet.toLocaleString('id-ID')}</div>
                 </div>
             </div>
         </div>
@@ -84,9 +84,9 @@ export default function CollectorDetailPage() {
                     {transactions.map(t => (
                         <tr key={t.id}>
                             <td className="whitespace-nowrap">
-                                {new Date(t.trans_date).toLocaleDateString()}
-                                {new Date(t.trans_date).toLocaleDateString()} <br/>
-                                <span className="text-xs text-gray-500">{new Date(t.trans_date).toLocaleTimeString()}</span>
+                                {new Date(t.trans_date).toLocaleDateString('id-ID')}
+                                {new Date(t.trans_date).toLocaleDateString('id-ID')} <br/>
+                                <span className="text-xs text-gray-500">{new Date(t.trans_date).toLocaleTimeString('id-ID')}</span>
                             </td>
                             <td className='text-center truncate'>
                                <span className="badge badge-info badge-outline">Jual Sampah</span>
@@ -96,13 +96,13 @@ export default function CollectorDetailPage() {
                                 <ul className="list-disc list-inside text-sm">
                                     {t.transaction_details?.map(d => (
                                         <li key={d.id}>
-                                            {d.waste_types?.name} ({d.qty} kg) - Rp {d.subtotal.toLocaleString()}
+                                            {d.waste_types?.name} ({Number(d.qty).toLocaleString('id-ID')} kg) - Rp {d.subtotal.toLocaleString('id-ID')}
                                         </li>
                                     ))}
                                 </ul>
                             </td>
                             <td className="text-right font-bold text-primary truncate">
-                                Rp {t.total_amount.toLocaleString()}
+                                Rp {t.total_amount.toLocaleString('id-ID')}
                             </td>
                         </tr>
                     ))}

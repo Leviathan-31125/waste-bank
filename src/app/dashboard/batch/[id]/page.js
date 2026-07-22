@@ -45,15 +45,15 @@ export default function BatchDetailPage() {
             <div className="card-body lg:flex-row md:flex-row flex-col justify-between lg:items-center md:items-center">
                 <div>
                     <h2 className="card-title lg:text-3xl md:text-3xl sm:text-2xl text-xl">{batch.name}</h2>
-                    <p className="text-gray-500 lg:text-base md:text-base text-sm">Dibuat: {new Date(batch.created_at).toLocaleDateString()}</p>
+                    <p className="text-gray-500 lg:text-base md:text-base text-sm">Dibuat: {new Date(batch.created_at).toLocaleDateString('id-ID')}</p>
                     <div className={`badge ${batch.status === 'ACTIVE' ? 'badge-success' : 'badge-warning'} text-white mt-2`}>{batch.status}</div>
                 </div>
                 <hr className='lg:hidden md:hidden border border-gray-200 mt-2'/>
                 <div className="text-right">
                     <div className="text-sm text-gray-500">Total Transaksi</div>
-                    <div className="lg:text-4xl md:text-4xl sm:text-3xl text-2xl font-bold text-primary">{transactions.length}</div>
+                    <div className="lg:text-4xl md:text-4xl sm:text-3xl text-2xl font-bold text-primary">{transactions.length.toLocaleString('id-ID')}</div>
                     <div className="text-sm text-gray-500 mt-1">Total Nominal</div>
-                    <div className="lg:text-2xl md:text-2xl sm:text-xl text-lg font-bold text-success">Rp {totalAmount.toLocaleString()}</div>
+                    <div className="lg:text-2xl md:text-2xl sm:text-xl text-lg font-bold text-success">Rp {totalAmount.toLocaleString('id-ID')}</div>
                 </div>
             </div>
         </div>
@@ -74,8 +74,8 @@ export default function BatchDetailPage() {
                     {transactions.map((t, i) => (
                         <tr key={i}>
                             <td className="align-top truncate whitespace-nowrap">
-                                {new Date(t.trans_date).toLocaleDateString()} <br/>
-                                <span className="text-xs text-gray-500">{new Date(t.trans_date).toLocaleTimeString()}</span>
+                                {new Date(t.trans_date).toLocaleDateString('id-ID')} <br/>
+                                <span className="text-xs text-gray-500">{new Date(t.trans_date).toLocaleTimeString('id-ID')}</span>
                             </td>
                             <td className="align-top truncate">
                                 {t.trans_type === 'DEPOSIT' ? (
@@ -94,14 +94,14 @@ export default function BatchDetailPage() {
                                     <ul className="list-disc list-inside text-sm">
                                         {t.transaction_details?.map((d, i) => (
                                             <li key={i}>
-                                                {d.waste_types?.name} ({d.qty} {d.waste_types.uoms.name}) - Rp {d.subtotal.toLocaleString()}
+                                                {d.waste_types?.name} ({Number(d.qty).toLocaleString('id-ID')} {d.waste_types.uoms.name}) - Rp {d.subtotal.toLocaleString('id-ID')}
                                             </li>
                                         ))}
                                     </ul>
                                 )}
                             </td>
                             <td className={`align-top text-right truncate font-bold ${t.trans_type === 'SELL_WASTE' || t.trans_type === 'DEPOSIT' ? 'text-success' : 'text-error'}`}>
-                                {t.trans_type === 'SELL_WASTE' || t.trans_type === 'DEPOSIT' ? '+' : '-'} Rp {t.total_amount.toLocaleString()}
+                                {t.trans_type === 'SELL_WASTE' || t.trans_type === 'DEPOSIT' ? '+' : '-'} Rp {t.total_amount.toLocaleString('id-ID')}
                             </td>
                         </tr>
                     ))}

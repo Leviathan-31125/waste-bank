@@ -1,32 +1,55 @@
 import DashboardSidebar from '@/components/DashboardSidebar'
-import Link from 'next/link'
 
 export default function DashboardLayout({ children }) {
   return (
     <div className="drawer lg:drawer-open">
-      <input id="my-drawer-2" type="checkbox" className="drawer-toggle" />
-      <div className="drawer-content flex flex-col bg-base-200 min-h-screen">
+      <input
+        id="my-drawer-2"
+        type="checkbox"
+        className="drawer-toggle"
+      />
+
+      <div className="drawer-content flex min-h-screen flex-col bg-base-200">
         {/* Navbar Mobile */}
-        <div className="w-full navbar bg-base-100 lg:hidden">
-            <div className='w-full flex justify-between'>
-                <div className="flex-none">
-                    <label htmlFor="my-drawer-2" className="btn btn-square btn-ghost">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="inline-block w-6 h-6 stroke-current"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                    </label>
-                </div>
-                <div className="font-bold mr-3">Bank Sampah BMS2</div>
+        <div className="navbar w-full bg-base-100 px-5 shadow-sm lg:hidden">
+          <div className="flex w-full items-center justify-between">
+            <label
+              htmlFor="my-drawer-2"
+              className="
+                flex min-h-0 h-9 items-center justify-center
+                rounded-lg bg-primary px-3
+                text-sm font-bold text-white
+                shadow-md
+                transition-all duration-200
+                hover:bg-primary/90
+                active:scale-95
+                cursor-pointer
+              "
+              aria-label="Buka menu navigasi"
+            >
+              MENU
+            </label>
+
+            <div className="text-sm font-bold text-base-content">
+              Bank Sampah BMS2
             </div>
+          </div>
         </div>
-        
+
         {/* Page Content */}
-        <div className="p-6">
-            {children}
-        </div>
-      </div> 
-      
+        <main className="p-5 sm:p-6">
+          {children}
+        </main>
+      </div>
+
       {/* Sidebar */}
-      <div className="drawer-side">
-        <label htmlFor="my-drawer-2" className="drawer-overlay"></label> 
+      <div className="drawer-side z-50">
+        <label
+          htmlFor="my-drawer-2"
+          aria-label="Tutup menu navigasi"
+          className="drawer-overlay"
+        />
+
         <DashboardSidebar />
       </div>
     </div>

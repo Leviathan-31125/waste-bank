@@ -1,7 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { createClient } from '@/lib/supabase';
 import { groupFirstUpperCase } from '@/utils/TextModify';
 
 export default function CustomersPage() {
@@ -9,241 +10,340 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  const [formData, setFormData] = useState({ 
-    id: null, 
-    name: '', 
-    address: '', 
-    phone: '', 
-    status: 'active' 
+
+  const [formData, setFormData] = useState({
+    id: null,
+    name: '',
+    address: '',
+    phone: '',
+    status: 'active',
   });
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     fetchCustomers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, []);
 
   const fetchCustomers = async () => {
-    // Order by ID descending biar data baru muncul paling atas
-    const { data } = await supabase.from('customers').select('*').order('id', { ascending: false })
-    setCustomers(data || [])
-  }
+    // Urutkan berdasarkan ID menurun agar data terbaru tampil paling atas.
+    const { data } = await supabase
+      .from('customers')
+      .select('*')
+      .order('id', { ascending: false });
 
-  // Helper untuk Link WhatsApp
+    setCustomers(data || []);
+  };
+
+  // Membuat tautan WhatsApp dari nomor telepon nasabah.
   const getWaLink = (phone) => {
-    if(!phone) return '#'
-    let cleanNum = phone.replace(/\D/g, '') // Hapus karakter selain angka
+    if (!phone) return '#';
+
+    let cleanNum = phone.replace(/\D/g, '');
+
     if (cleanNum.startsWith('0')) {
-        cleanNum = '62' + cleanNum.slice(1) // Ubah 08xx jadi 628xx
+      cleanNum = `62${cleanNum.slice(1)}`;
     }
-    return `https://wa.me/${cleanNum}`
-  }
 
-  const filteredCustomers = customers.filter(c => {
-    const term = searchTerm.toLowerCase()
+    return `https://wa.me/${cleanNum}`;
+  };
+
+  // Nilai database tetap "active" dan "non-active".
+  // Yang diubah hanya tulisan yang ditampilkan kepada pengguna.
+  const getStatusLabel = (status) => {
+    return status === 'active' ? 'Aktif' : 'Non-Aktif';
+  };
+
+  const filteredCustomers = customers.filter((customer) => {
+    const term = searchTerm.toLowerCase();
+
     return (
-        c.name.toLowerCase().includes(term) ||
-        (c.address && c.address.toLowerCase().includes(term)) ||
-        (c.phone && c.phone.includes(term))
-    )
-  })
+      customer.name.toLowerCase().includes(term) ||
+      (customer.address && customer.address.toLowerCase().includes(term)) ||
+      (customer.phone && customer.phone.includes(term))
+    );
+  });
 
-  // Handle Buka Modal Edit
-  const handleEdit = (c) => {
-    setIsEditing(true)
-    // Load data nasabah ke form
+  const handleEdit = (customer) => {
+    setIsEditing(true);
     setFormData({
-        id: c.id,
-        name: c.name,
-        address: c.address || '',
-        phone: c.phone || '',
-        status: c.status || 'active'
-    })
-    document.getElementById('modal_customer').showModal()
-  }
+      id: customer.id,
+      name: customer.name,
+      address: customer.address || '',
+      phone: customer.phone || '',
+      status: customer.status || 'active',
+    });
+    document.getElementById('modal_customer').showModal();
+  };
 
-  // Handle Buka Modal Tambah
   const handleAdd = () => {
-    setIsEditing(false)
-    // Reset form ke kosong
-    setFormData({ id: null, name: '', address: '', phone: '', status: 'active' })
-    document.getElementById('modal_customer').showModal()
-  }
+    setIsEditing(false);
+    setFormData({
+      id: null,
+      name: '',
+      address: '',
+      phone: '',
+      status: 'active',
+    });
+    document.getElementById('modal_customer').showModal();
+  };
 
-  // Handle Delete
-  const handleDelete = async (data) => {
-    if(!confirm(`Apakah Anda yakin ingin menghapus data nasabah: ${data.name}?`)) return;
-    const { error } = await supabase.from('customers').delete().eq('id', data.id)
-    
-    if (error) {
-      alert("Gagal hapus (Mungkin nasabah masih punya riwayat transaksi): " + error.message)
-    } else {
-      fetchCustomers()
+  const handleDelete = async (customer) => {
+    if (!confirm(`Apakah Anda yakin ingin menghapus data nasabah: ${customer.name}?`)) {
+      return;
     }
-  }
 
-  // Handle Submit (Simpan / Update)
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+    const { error } = await supabase
+      .from('customers')
+      .delete()
+      .eq('id', customer.id);
+
+    if (error) {
+      alert(
+        `Gagal hapus (mungkin nasabah masih mempunyai riwayat transaksi): ${error.message}`,
+      );
+    } else {
+      fetchCustomers();
+    }
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setLoading(true);
 
     const payload = {
       name: groupFirstUpperCase(formData.name),
       address: formData.address,
       phone: formData.phone,
-      status: formData.status
-    }
+      status: formData.status,
+    };
 
     let error;
+
     if (isEditing) {
-      // Logic UPDATE
-      const { error: err } = await supabase
+      const { error: updateError } = await supabase
         .from('customers')
         .update(payload)
-        .eq('id', formData.id)
-      error = err
+        .eq('id', formData.id);
+      error = updateError;
     } else {
-      // Logic INSERT
-      const { error: err } = await supabase
+      const { error: insertError } = await supabase
         .from('customers')
-        .insert(payload)
-      error = err
+        .insert(payload);
+      error = insertError;
     }
-    
-    setLoading(false)
-    
+
+    setLoading(false);
+
     if (error) {
-      alert('Gagal menyimpan: ' + error.message)
+      alert(`Gagal menyimpan: ${error.message}`);
     } else {
-      fetchCustomers() // Refresh tabel
-      document.getElementById('modal_customer').close() // Tutup modal
+      fetchCustomers();
+      document.getElementById('modal_customer').close();
     }
-  }
+  };
 
   return (
     <div>
-      <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+      <div className="mb-6 flex flex-col items-center justify-between gap-4 md:flex-row">
         <h2 className="text-2xl font-bold">Data Nasabah</h2>
-        <div className="flex gap-2 w-full md:w-auto">
-            <input 
-                type="text" 
-                placeholder="Cari Nasabah..." 
-                className="input input-bordered bg-white text-black w-full"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <button className="btn btn-primary text-white whitespace-nowrap" onClick={handleAdd}>
-              + Nasabah
-            </button>
+
+        <div className="flex w-full gap-2 md:w-auto">
+          <input
+            type="text"
+            placeholder="Cari Nasabah..."
+            className="input input-bordered w-full bg-white text-black"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+          />
+
+          <button
+            type="button"
+            className="btn btn-primary whitespace-nowrap text-white"
+            onClick={handleAdd}
+          >
+            + Nasabah
+          </button>
         </div>
       </div>
 
-      <div className="overflow-x-auto bg-white shadow rounded-box">
+      <div className="overflow-x-auto rounded-box bg-white shadow">
         <table className="table">
           <thead>
             <tr>
-              <th className='text-center'>Status</th>
+              <th className="text-center">Status</th>
               <th>Nama Nasabah</th>
+              <th className="text-right">Saldo (Rp)</th>
               <th>Kontak (WA)</th>
               <th>Alamat</th>
-              <th className='text-right'>Saldo Nasabah</th>
               <th className="text-center">Aksi</th>
             </tr>
           </thead>
+
           <tbody>
-            {filteredCustomers.map((c) => (
-              <tr key={c.id} className={c.status === 'non-active' ? 'bg-gray-100 text-gray-500' : ''}>
-                <td className='text-center'>
-                    <div className={`badge ${c.status === 'active' ? 'badge-success text-white' : 'badge-ghost'}`}>
-                        {c.status}
-                    </div>
+            {filteredCustomers.map((customer) => (
+              <tr
+                key={customer.id}
+                className={
+                  customer.status === 'non-active'
+                    ? 'bg-gray-100 text-gray-500'
+                    : ''
+                }
+              >
+                <td className="text-center">
+                  <div
+                    className={`badge ${customer.status === 'active'
+                      ? 'badge-success text-white'
+                      : 'badge-ghost'
+                      }`}
+                  >
+                    {getStatusLabel(customer.status)}
+                  </div>
                 </td>
-                <td className="font-bold truncate">{c.name}</td>
-                <td className='truncate'>
-                    <div className="flex flex-col">
-                        <span className="text-sm font-mono">{c.phone || "-"}</span>
-                        {c.phone && (
-                            <a href={getWaLink(c.phone)} target="_blank" rel="noopener noreferrer" 
-                              className="text-xs text-green-600 hover:text-green-800 font-bold flex items-center gap-1 mt-1">
-                              Chat WA ↗
-                            </a>
-                        )}
-                    </div>
+
+                <td className="truncate font-bold">{customer.name}</td>
+
+                <td className="truncate text-right font-mono font-bold text-success">
+                  {Number(customer.current_balance || 0).toLocaleString('id-ID')}
                 </td>
-                <td className="min-w-52">{c.address}</td>
-                <td className="font-mono font-bold text-success text-right truncate">Rp {c.current_balance.toLocaleString()}</td>
+
+                <td className="truncate">
+                  <div className="flex flex-col">
+                    <span className="font-mono text-sm">{customer.phone || '-'}</span>
+
+                    {customer.phone && (
+                      <a
+                        href={getWaLink(customer.phone)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1 flex items-center gap-1 text-xs font-bold text-green-600 hover:text-green-800"
+                      >
+                        Chat WA ↗
+                      </a>
+                    )}
+                  </div>
+                </td>
+
+                <td className="min-w-52">{customer.address}</td>
+
                 <td>
-                  <div className='flex gap-2 items-center'>
-                    <button className="btn btn-sm btn-info text-white" onClick={() => handleEdit(c)}>Edit</button>
-                    <Link href={`/dashboard/customers/${c.id}`} prefetch={false} className="btn btn-sm hover:bg-primary/40 border border-primary text-primary">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-info btn-sm text-white"
+                      onClick={() => handleEdit(customer)}
+                    >
+                      Edit
+                    </button>
+
+                    <Link
+                      href={`/dashboard/customers/${customer.id}`}
+                      prefetch={false}
+                      className="btn btn-sm border border-primary text-primary hover:bg-primary/40"
+                    >
                       Detail
                     </Link>
-                    <button className="btn btn-sm btn-error text-white" onClick={() => handleDelete(c)}>Hapus</button>  
+
+                    <button
+                      type="button"
+                      className="btn btn-error btn-sm text-white"
+                      onClick={() => handleDelete(customer)}
+                    >
+                      Hapus
+                    </button>
                   </div>
                 </td>
               </tr>
             ))}
-            {filteredCustomers.length === 0 && <tr><td colSpan="6" className="text-center py-4 italic text-gray-400">Data tidak ditemukan.</td></tr>}
+
+            {filteredCustomers.length === 0 && (
+              <tr>
+                <td colSpan="6" className="py-4 text-center italic text-gray-400">
+                  Data tidak ditemukan.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
       <dialog id="modal_customer" className="modal">
         <div className="modal-box bg-white">
-          <h3 className="font-bold text-lg mb-4 text-black">
+          <h3 className="mb-4 text-lg font-bold text-black">
             {isEditing ? 'Edit Data Nasabah' : 'Tambah Nasabah Baru'}
           </h3>
-          
+
           <form onSubmit={handleSubmit}>
-            <div className="form-control w-full mb-3">
+            <div className="form-control mb-3 w-full">
               <label className="label font-semibold text-gray-700">Nama Lengkap</label>
-              <input 
-                type="text" 
-                className="input input-bordered bg-white text-black w-full" 
-                required 
-                value={formData.name} 
-                onChange={e => setFormData({...formData, name: e.target.value})} 
+              <input
+                type="text"
+                className="input input-bordered w-full bg-white text-black"
+                required
+                value={formData.name}
+                onChange={(event) =>
+                  setFormData({ ...formData, name: event.target.value })
+                }
               />
             </div>
 
-            <div className="grid lg:grid-cols-2 md:grid-cols-2 grid-cols-1 gap-3 mb-3">
-                <div className="form-control">
-                    <label className="label font-semibold text-gray-700">No. Handphone (WA)</label>
-                    <input 
-                        type="text" 
-                        className="input input-bordered bg-white text-black w-full" 
-                        placeholder="08xxxxxxxx"
-                        value={formData.phone} 
-                        onChange={e => setFormData({...formData, phone: e.target.value})} 
-                    />
-                </div>
-                <div className="form-control">
-                    <label className="label font-semibold text-gray-700">Status</label>
-                    <select 
-                        className="select select-bordered bg-white text-black w-full" 
-                        value={formData.status} 
-                        onChange={e => setFormData({...formData, status: e.target.value})}
-                    >
-                        <option value="active">Active</option>
-                        <option value="non-active">Non-Active</option>
-                    </select>
-                </div>
+            <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-2">
+              <div className="form-control">
+                <label className="label font-semibold text-gray-700">
+                  No. Handphone (WA)
+                </label>
+                <input
+                  type="text"
+                  className="input input-bordered w-full bg-white text-black"
+                  placeholder="08xxxxxxxx"
+                  value={formData.phone}
+                  onChange={(event) =>
+                    setFormData({ ...formData, phone: event.target.value })
+                  }
+                />
+              </div>
+
+              <div className="form-control">
+                <label className="label font-semibold text-gray-700">Status</label>
+                <select
+                  className="select select-bordered w-full bg-white text-black"
+                  value={formData.status}
+                  onChange={(event) =>
+                    setFormData({ ...formData, status: event.target.value })
+                  }
+                >
+                  <option value="active">Aktif</option>
+                  <option value="non-active">Non-Aktif</option>
+                </select>
+              </div>
             </div>
 
-            <div className="form-control w-full mb-6">
+            <div className="form-control mb-6 w-full">
               <label className="label font-semibold text-gray-700">Alamat Lengkap</label>
-              <textarea 
-                className="textarea textarea-bordered bg-white text-black h-24" 
-                required 
-                value={formData.address} 
-                onChange={e => setFormData({...formData, address: e.target.value})}
-              ></textarea>
+              <textarea
+                className="textarea textarea-bordered h-24 bg-white text-black"
+                required
+                value={formData.address}
+                onChange={(event) =>
+                  setFormData({ ...formData, address: event.target.value })
+                }
+              />
             </div>
-            
+
             <div className="modal-action">
-              <button type="button" className="btn" onClick={()=>document.getElementById('modal_customer').close()}>Batal</button>
-              <button type="submit" className="btn btn-primary text-white" disabled={loading}>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => document.getElementById('modal_customer').close()}
+              >
+                Batal
+              </button>
+
+              <button
+                type="submit"
+                className="btn btn-primary text-white"
+                disabled={loading}
+              >
                 {loading ? 'Menyimpan...' : 'Simpan Data'}
               </button>
             </div>
@@ -251,5 +351,5 @@ export default function CustomersPage() {
         </div>
       </dialog>
     </div>
-  )
+  );
 }

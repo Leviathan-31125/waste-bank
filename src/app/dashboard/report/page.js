@@ -279,19 +279,21 @@ export default function ReportPage() {
                         onChange={(event) => setEndDate(event.target.value)}
                     />
                     { }
-                    <button
-                        className="btn btn-sm border-success text-success"
-                        onClick={exportCSV}
-                    >
-                        CSV
-                    </button>
+                    <div className="flex w-full flex-nowrap justify-center gap-2 md:justify-end">
+                        <button
+                            className="btn btn-sm border-success text-success"
+                            onClick={exportCSV}
+                        >
+                            CSV
+                        </button>
 
-                    <button
-                        className="btn btn-error btn-sm text-white"
-                        onClick={exportPDF}
-                    >
-                        PDF
-                    </button>
+                        <button
+                            className="btn btn-error btn-sm text-white"
+                            onClick={exportPDF}
+                        >
+                            PDF
+                        </button>
+                    </div>
                 </div>
             </div>
 
